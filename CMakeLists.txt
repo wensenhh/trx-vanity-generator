@@ -104,10 +104,15 @@ if(OpenCL_FOUND AND USE_OPENCL)
     endforeach()
 endif()
 
+# ECC test executable
+add_executable(test_ecc tests/test_ecc.cpp utils/crypto.cpp utils/rng.cpp host/opencl_manager.cpp)
+target_link_libraries(test_ecc OpenSSL::SSL OpenSSL::Crypto Threads::Threads ${OpenCL_LIBRARIES})
+target_include_directories(test_ecc PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
+target_compile_options(test_ecc PRIVATE -Wall -Wextra -O3 -march=native)
+
 # Tests
 if(BUILD_TESTS)
     enable_testing()
-    add_subdirectory(tests)
 endif()
 
 # Install

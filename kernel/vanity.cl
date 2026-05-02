@@ -437,61 +437,242 @@ void jacobian_to_affine(uint256* ax, uint256* ay, const jacobian_point* p, const
     montgomery_mul(ay, &p->y, &z_inv_cu, prime);
 }
 
-// Scalar multiplication
-void scalar_multiply_base(jacobian_point* result, const uint256* k, const uint256* prime) {
+// ============================================================================
+// Standard Modular Multiplication (Correct, non-Montgomery)
+// result = (a * b) mod p  where a, b are in standard domain [0, p-1]
+// ============================================================================
+
+// secp256k1 prime: p = 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
+// For reduction: 2^256 ≡ 2^32 + 2^9 + 2^8 + 2^7 + 2^6 + 2^4 + 1  (mod p)
+// Let c = 2^32 + 2^9 + 2^8 + 2^7 + 2^6 + 2^4 + 1
+// Then for any 512-bit value V = high * 2^256 + low:
+//   V mod p = (high * c + low) mod p
+// c in uint256 form (little-endian limbs):
+// c = 0x0000000000000001_0000000000000041 (bit 32 + bit 9 + bit 8 + bit 7 + bit 6 + bit 4 + bit 0)
+// c.d[0] = 0x0000000000000041 (bits 0,4,6,7,8,9 set = 1+16+64+128+256+512 = 977 = 0x3D1... wait)
+// Actually: 2^32 = 0x100000000, 2^9=512, 2^8=256, 2^7=128, 2^6=64, 2^4=16, 1=1
+// Sum = 4294967296 + 512 + 256 + 128 + 64 + 16 + 1 = 4294968273 = 0x100000031
+// c.d[0] = 0x100000031, c.d[1..3] = 0
+
+constant uint256 SECP256K1_C = {{0x0000000100000031UL, 0x0UL, 0x0UL, 0x0UL}};
+
+// 256x256 -> 512 bit multiplication
+void uint256_mul_512(ulong* out_hi, uint256* out_lo, const uint256* a, const uint256* b) {
+    ulong t[8] = {0};
+    for (int i = 0; i < 4; i++) {
+        ulong carry = 0;
+        for (int j = 0; j < 4; j++) {
+            ulong lo = a->d[i] * b->d[j];
+            ulong hi = mul_hi(a->d[i], b->d[j]);
+            ulong sum = t[i + j] + lo + carry;
+            carry = (sum < t[i + j]) ? 1 : 0;
+            carry += hi;
+            t[i + j] = sum;
+        }
+        t[i + 4] += carry;
+    }
+    for (int i = 0; i < 4; i++) {
+        out_lo->d[i] = t[i];
+        out_hi[i] = t[i + 4];
+    }
+}
+
+// Multiply by c = 2^256 mod p (which is just c since c < p)
+// out = (in * c) mod p, where in is a uint256
+void uint256_mul_by_c(uint256* out, const uint256* in, const uint256* p) {
+    // c = 0x100000031 (fits in one limb)
+    // in * c = in * (2^32 + 2^9 + 2^8 + 2^7 + 2^6 + 2^4 + 1)
+    //        = in<<32 + in<<9 + in<<8 + in<<7 + in<<6 + in<<4 + in
+    // All shifts are within 256 bits, so we can accumulate and reduce
+    uint256 acc = *in;  // + in
+    uint256 shifted;
+    // in << 4
+    shifted.d[0] = in->d[0] << 4;
+    shifted.d[1] = (in->d[1] << 4) | (in->d[0] >> 60);
+    shifted.d[2] = (in->d[2] << 4) | (in->d[1] >> 60);
+    shifted.d[3] = (in->d[3] << 4) | (in->d[2] >> 60);
+    uint256_add_mod(&acc, &acc, &shifted, p);
+    // in << 6
+    shifted.d[0] = in->d[0] << 6;
+    shifted.d[1] = (in->d[1] << 6) | (in->d[0] >> 58);
+    shifted.d[2] = (in->d[2] << 6) | (in->d[1] >> 58);
+    shifted.d[3] = (in->d[3] << 6) | (in->d[2] >> 58);
+    uint256_add_mod(&acc, &acc, &shifted, p);
+    // in << 7
+    shifted.d[0] = in->d[0] << 7;
+    shifted.d[1] = (in->d[1] << 7) | (in->d[0] >> 57);
+    shifted.d[2] = (in->d[2] << 7) | (in->d[1] >> 57);
+    shifted.d[3] = (in->d[3] << 7) | (in->d[2] >> 57);
+    uint256_add_mod(&acc, &acc, &shifted, p);
+    // in << 8
+    shifted.d[0] = in->d[0] << 8;
+    shifted.d[1] = (in->d[1] << 8) | (in->d[0] >> 56);
+    shifted.d[2] = (in->d[2] << 8) | (in->d[1] >> 56);
+    shifted.d[3] = (in->d[3] << 8) | (in->d[2] >> 56);
+    uint256_add_mod(&acc, &acc, &shifted, p);
+    // in << 9
+    shifted.d[0] = in->d[0] << 9;
+    shifted.d[1] = (in->d[1] << 9) | (in->d[0] >> 55);
+    shifted.d[2] = (in->d[2] << 9) | (in->d[1] >> 55);
+    shifted.d[3] = (in->d[3] << 9) | (in->d[2] >> 55);
+    uint256_add_mod(&acc, &acc, &shifted, p);
+    // in << 32
+    shifted.d[0] = in->d[0] << 32;
+    shifted.d[1] = (in->d[1] << 32) | (in->d[0] >> 32);
+    shifted.d[2] = (in->d[2] << 32) | (in->d[1] >> 32);
+    shifted.d[3] = (in->d[3] << 32) | (in->d[2] >> 32);
+    uint256_add_mod(&acc, &acc, &shifted, p);
+    *out = acc;
+}
+
+// Standard modular multiplication: result = (a * b) mod p
+// Uses the identity: 2^256 ≡ c (mod p) where c = 2^32 + 2^9 + ... + 1
+// For V = high * 2^256 + low: V mod p = (high * c + low) mod p
+void uint256_mul_mod_std(uint256* result, const uint256* a, const uint256* b, const uint256* p) {
+    uint256 low;
+    ulong high[4];
+    uint256_mul_512(high, &low, a, b);
+
+    // result = (high * c + low) mod p
+    uint256 high_val;
+    for (int i = 0; i < 4; i++) high_val.d[i] = high[i];
+
+    uint256 high_times_c;
+    uint256_mul_by_c(&high_times_c, &high_val, p);
+
+    uint256_add_mod(result, &high_times_c, &low, p);
+}
+
+// Point doubling using STANDARD arithmetic (no Montgomery)
+void point_double_std(jacobian_point* r, const jacobian_point* p, const uint256* prime) {
+    uint256 s, m, temp1, temp2, y_sq, y_sq_sq;
+    uint256_mul_mod_std(&y_sq, &p->y, &p->y, prime);
+    uint256_mul_mod_std(&y_sq_sq, &y_sq, &y_sq, prime);
+    uint256_mul_mod_std(&temp1, &p->x, &y_sq, prime);
+    uint256_add_mod(&s, &temp1, &temp1, prime);
+    uint256_add_mod(&s, &s, &temp1, prime);
+    uint256_add_mod(&s, &s, &temp1, prime);
+    uint256_mul_mod_std(&temp1, &p->x, &p->x, prime);
+    uint256_add_mod(&m, &temp1, &temp1, prime);
+    uint256_add_mod(&m, &m, &temp1, prime);
+    uint256_mul_mod_std(&temp1, &m, &m, prime);
+    uint256_add_mod(&temp2, &s, &s, prime);
+    uint256_sub_mod(&r->x, &temp1, &temp2, prime);
+    uint256_sub_mod(&temp1, &s, &r->x, prime);
+    uint256_mul_mod_std(&temp2, &m, &temp1, prime);
+    uint256_add_mod(&temp1, &y_sq_sq, &y_sq_sq, prime);
+    uint256_add_mod(&temp1, &temp1, &y_sq_sq, prime);
+    uint256_add_mod(&temp1, &temp1, &y_sq_sq, prime);
+    uint256_add_mod(&temp1, &temp1, &temp1, prime);
+    uint256_sub_mod(&r->y, &temp2, &temp1, prime);
+    uint256_mul_mod_std(&temp1, &p->y, &p->z, prime);
+    uint256_add_mod(&r->z, &temp1, &temp1, prime);
+}
+
+// Point addition using STANDARD arithmetic
+void point_add_std(jacobian_point* r, const jacobian_point* p,
+                   const uint256* qx, const uint256* qy, const uint256* prime) {
+    uint256 z1_sq, z1_cu, u1, u2, s1, s2, h, h_sq, h_cu, r_val, temp1, temp2;
+    uint256_mul_mod_std(&z1_sq, &p->z, &p->z, prime);
+    uint256_mul_mod_std(&z1_cu, &z1_sq, &p->z, prime);
+    uint256_mul_mod_std(&u2, qx, &z1_sq, prime);
+    uint256_mul_mod_std(&s2, qy, &z1_cu, prime);
+    u1 = p->x;
+    s1 = p->y;
+    uint256_sub_mod(&h, &u2, &u1, prime);
+    uint256_sub_mod(&r_val, &s2, &s1, prime);
+    uint256_mul_mod_std(&h_sq, &h, &h, prime);
+    uint256_mul_mod_std(&h_cu, &h_sq, &h, prime);
+    uint256_mul_mod_std(&temp1, &r_val, &r_val, prime);
+    uint256_sub_mod(&temp1, &temp1, &h_cu, prime);
+    uint256_mul_mod_std(&temp2, &u1, &h_sq, prime);
+    uint256_add_mod(&temp2, &temp2, &temp2, prime);
+    uint256_sub_mod(&r->x, &temp1, &temp2, prime);
+    uint256_mul_mod_std(&temp1, &u1, &h_sq, prime);
+    uint256_sub_mod(&temp1, &temp1, &r->x, prime);
+    uint256_mul_mod_std(&temp2, &r_val, &temp1, prime);
+    uint256_mul_mod_std(&temp1, &s1, &h_cu, prime);
+    uint256_sub_mod(&r->y, &temp2, &temp1, prime);
+    uint256_mul_mod_std(&r->z, &h, &p->z, prime);
+}
+
+// Jacobian to Affine using STANDARD arithmetic
+void jacobian_to_affine_std(uint256* ax, uint256* ay, const jacobian_point* p, const uint256* prime) {
+    uint256 z_inv, z_inv_sq, z_inv_cu;
+    uint256 p_minus_2;
+    p_minus_2.d[0] = 0xFFFFFFFFFFFFFFFDUL;
+    p_minus_2.d[1] = 0xFFFFFFFFFFFFFFFEUL;
+    p_minus_2.d[2] = 0xFFFFFFFFFFFFFFFFUL;
+    p_minus_2.d[3] = 0xFFFFFFFFFFFFFFFFUL;
+    uint256 base = p->z;
+    uint256 exp = p_minus_2;
+    uint256 result;
+    result.d[0] = 1; result.d[1] = 0; result.d[2] = 0; result.d[3] = 0;
+    while (!uint256_is_zero(&exp)) {
+        if (exp.d[0] & 1) {
+            uint256_mul_mod_std(&result, &result, &base, prime);
+        }
+        uint256_mul_mod_std(&base, &base, &base, prime);
+        uint256_rshift1(&exp, &exp);
+    }
+    z_inv = result;
+    uint256_mul_mod_std(&z_inv_sq, &z_inv, &z_inv, prime);
+    uint256_mul_mod_std(&z_inv_cu, &z_inv_sq, &z_inv, prime);
+    uint256_mul_mod_std(ax, &p->x, &z_inv_sq, prime);
+    uint256_mul_mod_std(ay, &p->y, &z_inv_cu, prime);
+}
+
+// Scalar multiplication using double-and-add with STANDARD arithmetic (CORRECT)
+// result = k * G
+void scalar_multiply_base_std(jacobian_point* result, const uint256* k, const uint256* prime) {
     result->x = (uint256){{0, 0, 0, 0}};
     result->y = (uint256){{0, 0, 0, 0}};
     result->z = (uint256){{0, 0, 0, 0}};
 
-    uint256 gx;
+    uint256 gx, gy;
     gx.d[0] = 0x59F2815B16F81798UL;
     gx.d[1] = 0x029BFCDB2DCE28D9UL;
     gx.d[2] = 0x55A06295CE870B07UL;
     gx.d[3] = 0x79BE667EF9DCBBACUL;
-
-    uint256 gy;
     gy.d[0] = 0x9C47D08FFB10D4B8UL;
     gy.d[1] = 0xFD17B448A6855419UL;
     gy.d[2] = 0x5C6A30C994A29846UL;
     gy.d[3] = 0x483ADA7726A3C465UL;
 
-    jacobian_point g_mont;
-    g_mont.x = gx;
-    g_mont.y = gy;
-    g_mont.z = (uint256){{1, 0, 0, 0}};
+    // Find highest set bit
+    int highest_bit = 255;
+    while (highest_bit >= 0) {
+        int limb = highest_bit / 64;
+        int bit_in_limb = highest_bit % 64;
+        if ((k->d[limb] >> bit_in_limb) & 1) break;
+        highest_bit--;
+    }
 
-    jacobian_point r0;
-    r0.x = (uint256){{0, 0, 0, 0}};
-    r0.y = (uint256){{0, 0, 0, 0}};
-    r0.z = (uint256){{0, 0, 0, 0}};
-    jacobian_point r1 = g_mont;
+    if (highest_bit < 0) return;  // k = 0
 
-    for (int i = 255; i >= 0; i--) {
+    // Initialize with G
+    result->x = gx;
+    result->y = gy;
+    result->z = (uint256){{1, 0, 0, 0}};
+
+    // Process remaining bits
+    for (int i = highest_bit - 1; i >= 0; i--) {
+        point_double_std(result, result, prime);
         int bit = (int)((k->d[i / 64] >> (i % 64)) & 1);
         if (bit) {
-            jacobian_point temp = r0;
-            r0 = r1;
-            r1 = temp;
-        }
-        point_add(&r1, &r0, &r1.x, &r1.y, prime);
-        point_double(&r0, &r0, prime);
-        if (bit) {
-            jacobian_point temp = r0;
-            r0 = r1;
-            r1 = temp;
+            point_add_std(result, result, &gx, &gy, prime);
         }
     }
-    *result = r0;
 }
 
-// Generate public key from private key
+// Generate public key from private key using STANDARD arithmetic
 void generate_public_key_gpu(uchar* public_key, const uchar* private_key, const uint256* prime) {
     uint256 k;
     uint256_from_bytes(&k, private_key);
     jacobian_point result;
-    scalar_multiply_base(&result, &k, prime);
+    scalar_multiply_base_std(&result, &k, prime);
     uint256 ax, ay;
-    jacobian_to_affine(&ax, &ay, &result, prime);
+    jacobian_to_affine_std(&ax, &ay, &result, prime);
     for (int i = 0; i < 4; i++) {
         public_key[i * 8 + 0] = (uchar)(ax.d[3 - i] >> 56);
         public_key[i * 8 + 1] = (uchar)(ax.d[3 - i] >> 48);
