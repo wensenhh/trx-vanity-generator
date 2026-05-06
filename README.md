@@ -16,6 +16,10 @@ Supports Windows (NVIDIA/AMD) and macOS (Apple Silicon).
 - CPU: ≥ 50,000 addresses/sec
 - GPU: ≥ 1,000,000 addresses/sec (theoretical)
 
+## Documentation
+
+- [中文小白使用文档](docs/USER_GUIDE_zh.md) — macOS / Windows / Linux 编译运行、CPU/GPU 模式、常见问题、安全提醒。
+
 ## Build
 
 ```bash
