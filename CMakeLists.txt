@@ -140,6 +140,10 @@ if(BUILD_TESTS)
         add_test(NAME cli_gpu_autotune_smoke
             COMMAND trx_vanity prefix ZZZ --gpu --auto-tune --auto-tune-sizes 64,128 --auto-tune-batches 1 --batches 1 --benchmark-json)
         set_tests_properties(cli_gpu_autotune_smoke PROPERTIES TIMEOUT 30)
+
+        add_test(NAME cli_gpu_profile_smoke
+            COMMAND trx_vanity contains T --gpu --batch-size 64 --batches 1 --profile --benchmark-json)
+        set_tests_properties(cli_gpu_profile_smoke PROPERTIES TIMEOUT 30)
     endif()
 endif()
 

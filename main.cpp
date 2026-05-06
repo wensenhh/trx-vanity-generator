@@ -40,7 +40,7 @@ void print_banner() {
 ║           TRON (TRX) Vanity Address Generator                  ║
 ║                    GPU Accelerated                             ║
 ╠══════════════════════════════════════════════════════════════╣
-║  Phase 1: CPU Version (OpenCL GPU coming in Phase 2-4)      ║
+║          Full GPU ECC + Base58 Filter (OpenCL)              ║
 ╚══════════════════════════════════════════════════════════════╝
 )" << '\n';
 }
