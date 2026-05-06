@@ -158,7 +158,6 @@ void GPUGenerator::stop() {
 
 void GPUGenerator::generation_loop() {
     RNG rng;
-    Secp256k1 ecc;
     std::vector<cl_uint4> seeds(config_.batch_size);
     std::vector<GPUMatchResult> gpu_results(config_.batch_size);
     std::vector<cl_uchar> gpu_addresses(config_.batch_size * TRX_ADDRESS_SIZE);
@@ -209,7 +208,7 @@ void GPUGenerator::generation_loop() {
                             gpu_addresses.data(), true);
 
             // Process GPU results on CPU (full verification)
-            process_gpu_results(gpu_results, gpu_addresses, match_count, ecc, rng);
+            process_gpu_results(gpu_results, gpu_addresses, match_count, rng);
         }
 
         total_attempts_ += config_.batch_size;
@@ -227,9 +226,13 @@ void GPUGenerator::process_gpu_results(
     const std::vector<GPUMatchResult>& gpu_results,
     const std::vector<cl_uchar>& gpu_addresses,
     cl_uint count,
-    Secp256k1& ecc,
     RNG& rng
 ) {
+    std::unique_ptr<Secp256k1> verifier;
+    if (config_.verify_gpu_results) {
+        verifier = std::make_unique<Secp256k1>();
+    }
+
     for (cl_uint i = 0; i < count; ++i) {
         const auto& gpu_result = gpu_results[i];
 
@@ -245,23 +248,23 @@ void GPUGenerator::process_gpu_results(
         auto seed_bytes = rng.seed_to_bytes(seed);
         auto private_key = rng.derive_private_key(seed_bytes);
 
-        // Generate public key and address using CPU reference
-        auto public_key = ecc.generate_public_key(private_key);
-        auto address_bytes = ecc.generate_address_bytes(public_key);
-
-        // Compare with GPU output
-        bool gpu_match = true;
+        // Use the GPU-computed address for normal matching. Recomputing ECC on
+        // the CPU for every candidate defeats the purpose of the full-GPU path;
+        // keep it as an opt-in debug safeguard instead.
+        std::array<uint8_t, TRX_ADDRESS_SIZE> address_bytes{};
         for (size_t j = 0; j < TRX_ADDRESS_SIZE; ++j) {
-            if (gpu_addresses[i * TRX_ADDRESS_SIZE + j] != address_bytes[j]) {
-                gpu_match = false;
-                break;
-            }
+            address_bytes[j] = static_cast<uint8_t>(gpu_addresses[i * TRX_ADDRESS_SIZE + j]);
         }
 
-        if (!gpu_match) {
-            std::cerr << "WARNING: GPU/CPU address mismatch for seed "
-                      << seed[0] << " " << seed[1] << " " << seed[2] << " " << seed[3] << "\n";
-            continue;
+        if (config_.verify_gpu_results) {
+            auto public_key = verifier->generate_public_key(private_key);
+            auto cpu_address_bytes = verifier->generate_address_bytes(public_key);
+
+            if (cpu_address_bytes != address_bytes) {
+                std::cerr << "WARNING: GPU/CPU address mismatch for seed "
+                          << seed[0] << " " << seed[1] << " " << seed[2] << " " << seed[3] << "\n";
+                continue;
+            }
         }
 
         // Encode to Base58

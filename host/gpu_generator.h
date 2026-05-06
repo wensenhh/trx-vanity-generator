@@ -24,6 +24,7 @@ struct GPUGenerationConfig {
     size_t num_batches = 0;           // 0 = infinite
     int platform_idx = -1;            // -1 = auto
     int device_idx = -1;              // -1 = auto
+    bool verify_gpu_results = false;  // Recompute ECC on CPU for debugging
     bool verbose = false;
 };
 
@@ -61,7 +62,6 @@ private:
         const std::vector<GPUMatchResult>& gpu_results,
         const std::vector<cl_uchar>& gpu_addresses,
         cl_uint count,
-        Secp256k1& ecc,
         RNG& rng
     );
 
