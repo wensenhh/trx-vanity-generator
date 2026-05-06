@@ -119,6 +119,16 @@ if(BUILD_TESTS)
     if(TARGET test_ecc)
         add_test(NAME ecc_correctness COMMAND test_ecc)
     endif()
+
+    add_test(NAME cli_cpu_smoke
+        COMMAND trx_vanity prefix T --max-attempts 64 -t 1)
+    set_tests_properties(cli_cpu_smoke PROPERTIES TIMEOUT 10)
+
+    if(TARGET test_ecc)
+        add_test(NAME cli_gpu_smoke
+            COMMAND trx_vanity prefix T --gpu --batch-size 64 --batches 1)
+        set_tests_properties(cli_gpu_smoke PROPERTIES TIMEOUT 20)
+    endif()
 endif()
 
 # Install

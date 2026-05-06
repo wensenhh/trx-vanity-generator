@@ -45,6 +45,7 @@ void print_usage(const char* prog) {
               << "  --batch-size <n>      GPU addresses per batch (default: 65536)\n"
               << "  --batches <n>         GPU batch count, then stop (default: 0=infinite)\n"
               << "  --gpu-verify          Recompute matched GPU addresses on CPU for debugging\n"
+              << "  --max-attempts <n>    Stop after approximately n attempts (CPU smoke/CI)\n"
               << "  -t, --threads <n>     Number of CPU threads (default: auto)\n"
               << "  -o, --output <file>   Output file for matches\n"
               << "  -v, --verbose         Show progress every second\n"
@@ -77,6 +78,7 @@ int main(int argc, char* argv[]) {
     bool gpu_verify = false;
     size_t gpu_batch_size = DEFAULT_BATCH_SIZE;
     size_t gpu_num_batches = 0;
+    uint64_t max_attempts = 0;
 
     for (int i = 3; i < argc; ++i) {
         std::string arg = argv[i];
@@ -97,6 +99,8 @@ int main(int argc, char* argv[]) {
             gpu_batch_size = std::stoull(argv[++i]);
         } else if (arg == "--batches" && i + 1 < argc) {
             gpu_num_batches = std::stoull(argv[++i]);
+        } else if (arg == "--max-attempts" && i + 1 < argc) {
+            max_attempts = std::stoull(argv[++i]);
         } else if (i == 3 && (pattern_type == "consecutive" || pattern_type == "sequential")) {
             pattern_arg2 = arg;
         }
@@ -155,6 +159,7 @@ int main(int argc, char* argv[]) {
         cpu_generator->set_pattern(std::move(pattern));
         cpu_generator->set_num_threads(num_threads);
         cpu_generator->set_batch_size(1000);
+        cpu_generator->set_max_attempts(max_attempts);
     }
 
     // Setup result callback

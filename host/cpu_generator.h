@@ -28,6 +28,7 @@ public:
     void add_pattern(std::unique_ptr<Pattern> pattern);
     void set_num_threads(size_t threads);
     void set_batch_size(size_t size);
+    void set_max_attempts(uint64_t max_attempts);
 
     // Generation control
     void start();
@@ -62,6 +63,7 @@ private:
     // Statistics
     std::atomic<uint64_t> total_attempts_{0};
     std::atomic<uint64_t> match_count_{0};
+    uint64_t max_attempts_{0}; // 0 = unlimited
     std::chrono::steady_clock::time_point start_time_;
 
     // Results

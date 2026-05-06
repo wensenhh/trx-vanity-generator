@@ -34,6 +34,10 @@ void CPUGenerator::set_batch_size(size_t size) {
     batch_size_ = size;
 }
 
+void CPUGenerator::set_max_attempts(uint64_t max_attempts) {
+    max_attempts_ = max_attempts;
+}
+
 void CPUGenerator::set_callback(ResultCallback cb) {
     std::lock_guard<std::mutex> lock(callback_mutex_);
     callback_ = cb;
@@ -112,7 +116,12 @@ void CPUGenerator::worker_thread(int thread_id) {
                 }
             }
 
-            total_attempts_++;
+            uint64_t attempts = ++total_attempts_;
+            if (max_attempts_ > 0 && attempts >= max_attempts_) {
+                stop_requested_ = true;
+                running_ = false;
+                break;
+            }
         }
     }
 }

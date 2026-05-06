@@ -27,10 +27,22 @@ cmake --build . --parallel
 ## Usage
 
 ```bash
-./trx_vanity --pattern 8888888 --type suffix
-./trx_vanity --pattern 1234567 --type sequential
-./trx_vanity --pattern 520 --type custom
+# CPU mode
+./trx_vanity suffix 8888888 -t 8
+./trx_vanity sequential 1 7 -v
+./trx_vanity contains 520 -o results.csv
+
+# GPU mode (OpenCL)
+./trx_vanity suffix 8888888 --gpu --batch-size 65536
+./trx_vanity prefix T --gpu --batches 1        # finite smoke run
+./trx_vanity prefix T --gpu --gpu-verify       # debug CPU/GPU address checks
 ```
+
+`TRX_KERNEL_DIR=/path/to/kernel` can be set when running the GPU binary outside
+the source/build tree so `vanity.cl` can be located.
+
+For CI/smoke tests, CPU mode supports `--max-attempts <n>` to stop after a
+bounded number of generated addresses.
 
 ## Architecture
 
