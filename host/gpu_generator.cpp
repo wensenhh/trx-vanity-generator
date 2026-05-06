@@ -14,6 +14,11 @@ namespace trx {
 
 namespace {
 
+double elapsed_ms(std::chrono::steady_clock::time_point start,
+                  std::chrono::steady_clock::time_point end) {
+    return std::chrono::duration<double, std::milli>(end - start).count();
+}
+
 std::string find_vanity_kernel_path() {
     namespace fs = std::filesystem;
 
@@ -156,6 +161,10 @@ void GPUGenerator::start() {
     total_attempts_ = 0;
     start_time_ = std::chrono::steady_clock::now();
     results_.clear();
+    {
+        std::lock_guard<std::mutex> lock(profile_mutex_);
+        profile_stats_ = GPUProfileStats{};
+    }
 
     generation_thread_ = std::thread(&GPUGenerator::generation_loop, this);
 }
@@ -176,6 +185,9 @@ void GPUGenerator::generation_loop() {
     std::vector<cl_uchar> gpu_addresses(config_.batch_size * TRX_ADDRESS_SIZE);
 
     while (!stop_requested_.load()) {
+        GPUProfileStats batch_stats;
+        auto step_start = std::chrono::steady_clock::now();
+
         // Generate seeds for this batch
         for (size_t i = 0; i < config_.batch_size; ++i) {
             auto seed = rng.generate_seed();
@@ -184,13 +196,21 @@ void GPUGenerator::generation_loop() {
             seeds[i].s[2] = seed[2];
             seeds[i].s[3] = seed[3];
         }
+        auto step_end = std::chrono::steady_clock::now();
+        batch_stats.seed_generation_ms = elapsed_ms(step_start, step_end);
 
         // Upload seeds
+        step_start = std::chrono::steady_clock::now();
         cl_->write_buffer(seeds_buffer_, seeds.size() * sizeof(cl_uint4), seeds.data(), true);
+        step_end = std::chrono::steady_clock::now();
+        batch_stats.seed_upload_ms = elapsed_ms(step_start, step_end);
 
         // Reset match count
         cl_uint zero = 0;
+        step_start = std::chrono::steady_clock::now();
         cl_->write_buffer(match_count_buffer_, sizeof(cl_uint), &zero, true);
+        step_end = std::chrono::steady_clock::now();
+        batch_stats.counter_reset_ms = elapsed_ms(step_start, step_end);
 
         // Launch kernel
         size_t global_size = config_.batch_size;
@@ -201,12 +221,22 @@ void GPUGenerator::generation_loop() {
             global_size = ((global_size / local_size) + 1) * local_size;
         }
 
-        cl_->enqueue_nd_range(kernel_, 1, &global_size, &local_size);
-        cl_->finish();
+        if (config_.profile) {
+            batch_stats.kernel_ms = cl_->enqueue_nd_range_timed_ms(kernel_, 1, &global_size, &local_size);
+        } else {
+            step_start = std::chrono::steady_clock::now();
+            cl_->enqueue_nd_range(kernel_, 1, &global_size, &local_size);
+            cl_->finish();
+            step_end = std::chrono::steady_clock::now();
+            batch_stats.kernel_ms = elapsed_ms(step_start, step_end);
+        }
 
         // Read results
         cl_uint match_count = 0;
+        step_start = std::chrono::steady_clock::now();
         cl_->read_buffer(match_count_buffer_, sizeof(cl_uint), &match_count, true);
+        step_end = std::chrono::steady_clock::now();
+        batch_stats.count_read_ms = elapsed_ms(step_start, step_end);
 
         if (match_count > 0) {
             if (match_count > config_.batch_size) {
@@ -215,13 +245,33 @@ void GPUGenerator::generation_loop() {
                           << "; clamping readback to allocated buffer size\n";
                 match_count = static_cast<cl_uint>(config_.batch_size);
             }
+            step_start = std::chrono::steady_clock::now();
             cl_->read_buffer(results_buffer_, match_count * sizeof(GPUMatchResult),
                             gpu_results.data(), true);
             cl_->read_buffer(addresses_buffer_, match_count * TRX_ADDRESS_SIZE * sizeof(cl_uchar),
                             gpu_addresses.data(), true);
+            step_end = std::chrono::steady_clock::now();
+            batch_stats.result_read_ms = elapsed_ms(step_start, step_end);
 
             // Process GPU results on CPU (full verification)
+            step_start = std::chrono::steady_clock::now();
             process_gpu_results(gpu_results, gpu_addresses, match_count, rng);
+            step_end = std::chrono::steady_clock::now();
+            batch_stats.host_process_ms = elapsed_ms(step_start, step_end);
+        }
+        batch_stats.batches = 1;
+        batch_stats.matches_returned = match_count;
+        {
+            std::lock_guard<std::mutex> lock(profile_mutex_);
+            profile_stats_.batches += batch_stats.batches;
+            profile_stats_.matches_returned += batch_stats.matches_returned;
+            profile_stats_.seed_generation_ms += batch_stats.seed_generation_ms;
+            profile_stats_.seed_upload_ms += batch_stats.seed_upload_ms;
+            profile_stats_.counter_reset_ms += batch_stats.counter_reset_ms;
+            profile_stats_.kernel_ms += batch_stats.kernel_ms;
+            profile_stats_.count_read_ms += batch_stats.count_read_ms;
+            profile_stats_.result_read_ms += batch_stats.result_read_ms;
+            profile_stats_.host_process_ms += batch_stats.host_process_ms;
         }
 
         total_attempts_ += config_.batch_size;
@@ -318,6 +368,11 @@ double GPUGenerator::get_rate() const {
     double seconds = std::chrono::duration<double>(elapsed).count();
     if (seconds < 0.001) return 0.0;
     return static_cast<double>(total_attempts_.load()) / seconds;
+}
+
+GPUProfileStats GPUGenerator::get_profile_stats() const {
+    std::lock_guard<std::mutex> lock(profile_mutex_);
+    return profile_stats_;
 }
 
 } // namespace trx

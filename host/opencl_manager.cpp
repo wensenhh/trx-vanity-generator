@@ -200,9 +200,13 @@ void OpenCLManager::select_device(int platform_idx, int device_idx) {
     }
 
 #ifdef CL_VERSION_2_0
-    queue_ = clCreateCommandQueueWithProperties(context_, device_, nullptr, &err);
+    const cl_queue_properties props[] = {
+        CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE,
+        0
+    };
+    queue_ = clCreateCommandQueueWithProperties(context_, device_, props, &err);
 #else
-    queue_ = clCreateCommandQueue(context_, device_, 0, &err);
+    queue_ = clCreateCommandQueue(context_, device_, CL_QUEUE_PROFILING_ENABLE, &err);
 #endif
     if (err != CL_SUCCESS) {
         throw OpenCLException(err, "Failed to create command queue");
@@ -333,6 +337,40 @@ void OpenCLManager::enqueue_nd_range(cl_kernel kernel, cl_uint work_dim,
     if (err != CL_SUCCESS) {
         throw OpenCLException(err, "Failed to enqueue NDRange kernel");
     }
+}
+
+double OpenCLManager::enqueue_nd_range_timed_ms(cl_kernel kernel, cl_uint work_dim,
+                                                const size_t* global_work_size,
+                                                const size_t* local_work_size) {
+    cl_event event = nullptr;
+    cl_int err = clEnqueueNDRangeKernel(queue_, kernel, work_dim, nullptr,
+                                          global_work_size, local_work_size,
+                                          0, nullptr, &event);
+    if (err != CL_SUCCESS) {
+        throw OpenCLException(err, "Failed to enqueue timed NDRange kernel");
+    }
+
+    err = clWaitForEvents(1, &event);
+    if (err != CL_SUCCESS) {
+        clReleaseEvent(event);
+        throw OpenCLException(err, "Failed waiting for timed NDRange kernel");
+    }
+
+    cl_ulong start_ns = 0;
+    cl_ulong end_ns = 0;
+    err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(start_ns), &start_ns, nullptr);
+    if (err != CL_SUCCESS) {
+        clReleaseEvent(event);
+        throw OpenCLException(err, "Failed reading kernel profiling start time");
+    }
+    err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(end_ns), &end_ns, nullptr);
+    if (err != CL_SUCCESS) {
+        clReleaseEvent(event);
+        throw OpenCLException(err, "Failed reading kernel profiling end time");
+    }
+
+    clReleaseEvent(event);
+    return static_cast<double>(end_ns - start_ns) / 1000000.0;
 }
 
 void OpenCLManager::finish() {

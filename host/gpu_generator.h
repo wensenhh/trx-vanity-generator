@@ -11,6 +11,9 @@
 #include <vector>
 #include <memory>
 #include <array>
+#include <chrono>
+#include <functional>
+#include <mutex>
 
 namespace trx {
 
@@ -26,6 +29,7 @@ struct GPUGenerationConfig {
     int platform_idx = -1;            // -1 = auto
     int device_idx = -1;              // -1 = auto
     bool verify_gpu_results = false;  // Recompute matched GPU addresses on CPU for debugging
+    bool profile = false;             // Collect per-batch timing for GPU benchmark/profiling
     bool verbose = false;
 
     // Exact GPU-side Base58Check filter. The host still verifies matches before
@@ -35,6 +39,22 @@ struct GPUGenerationConfig {
     uint32_t gpu_pattern_type = 0;
     uint32_t gpu_pattern_len = 0;
     std::array<uint8_t, 20> gpu_pattern_chars{};
+};
+
+struct GPUProfileStats {
+    uint64_t batches = 0;
+    uint64_t matches_returned = 0;
+    double seed_generation_ms = 0.0;
+    double seed_upload_ms = 0.0;
+    double counter_reset_ms = 0.0;
+    double kernel_ms = 0.0;
+    double count_read_ms = 0.0;
+    double result_read_ms = 0.0;
+    double host_process_ms = 0.0;
+
+    double avg(double total_ms) const {
+        return batches == 0 ? 0.0 : total_ms / static_cast<double>(batches);
+    }
 };
 
 class GPUGenerator {
@@ -60,6 +80,7 @@ public:
     std::vector<MatchResult> get_results();
     uint64_t get_total_attempts() const { return total_attempts_.load(); }
     double get_rate() const;
+    GPUProfileStats get_profile_stats() const;
 
     // Callback
     using ResultCallback = std::function<void(const MatchResult&)>;
@@ -100,6 +121,8 @@ private:
     // Statistics
     std::atomic<uint64_t> total_attempts_{0};
     std::chrono::steady_clock::time_point start_time_;
+    GPUProfileStats profile_stats_;
+    mutable std::mutex profile_mutex_;
 
     // Results
     std::vector<MatchResult> results_;

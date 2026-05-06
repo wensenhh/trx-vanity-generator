@@ -11,6 +11,7 @@
 #include <csignal>
 #include <fstream>
 #include <algorithm>
+#include <sstream>
 
 using namespace trx;
 
@@ -46,6 +47,8 @@ void print_usage(const char* prog) {
               << "  --batch-size <n>      GPU addresses per batch (default: 65536)\n"
               << "  --batches <n>         GPU batch count, then stop (default: 0=infinite)\n"
               << "  --gpu-verify          Recompute matched GPU addresses on CPU for debugging\n"
+              << "  --profile             Print GPU per-batch timing breakdown\n"
+              << "  --benchmark-json      Print final benchmark metrics as JSON\n"
               << "  --max-attempts <n>    Stop after approximately n attempts (CPU smoke/CI)\n"
               << "  -t, --threads <n>     Number of CPU threads (default: auto)\n"
               << "  -o, --output <file>   Output file for matches\n"
@@ -77,6 +80,8 @@ int main(int argc, char* argv[]) {
     // Add GPU mode CLI flag
     bool use_gpu = false;
     bool gpu_verify = false;
+    bool gpu_profile = false;
+    bool benchmark_json = false;
     size_t gpu_batch_size = DEFAULT_BATCH_SIZE;
     size_t gpu_num_batches = 0;
     uint64_t max_attempts = 0;
@@ -96,6 +101,10 @@ int main(int argc, char* argv[]) {
             use_gpu = true;
         } else if (arg == "--gpu-verify") {
             gpu_verify = true;
+        } else if (arg == "--profile") {
+            gpu_profile = true;
+        } else if (arg == "--benchmark-json") {
+            benchmark_json = true;
         } else if (arg == "--batch-size" && i + 1 < argc) {
             gpu_batch_size = std::stoull(argv[++i]);
         } else if (arg == "--batches" && i + 1 < argc) {
@@ -182,6 +191,7 @@ int main(int argc, char* argv[]) {
         gpu_config.work_group_size = DEFAULT_WORK_GROUP_SIZE;
         gpu_config.num_batches = gpu_num_batches;
         gpu_config.verify_gpu_results = gpu_verify;
+        gpu_config.profile = gpu_profile || benchmark_json;
         gpu_config.verbose = verbose;
         gpu_generator->set_config(gpu_config);
         gpu_generator->initialize();
@@ -279,6 +289,48 @@ int main(int argc, char* argv[]) {
     std::cout << "Total Time:     " << std::fixed << std::setprecision(2) << total_elapsed << "s\n";
     std::cout << "Average Rate:   " << std::setprecision(0) << (total_attempts / total_elapsed) << " addr/s\n";
     std::cout << "Matches Found:  " << total_matches << "\n";
+
+    if (use_gpu && (gpu_profile || benchmark_json)) {
+        GPUProfileStats stats = gpu_generator->get_profile_stats();
+        if (gpu_profile) {
+            std::cout << "\nGPU Profile\n";
+            std::cout << "  Batches:             " << stats.batches << "\n";
+            std::cout << "  GPU matches returned:" << stats.matches_returned << "\n";
+            std::cout << std::fixed << std::setprecision(3);
+            std::cout << "  Avg seed gen:        " << stats.avg(stats.seed_generation_ms) << " ms/batch\n";
+            std::cout << "  Avg seed upload:     " << stats.avg(stats.seed_upload_ms) << " ms/batch\n";
+            std::cout << "  Avg counter reset:   " << stats.avg(stats.counter_reset_ms) << " ms/batch\n";
+            std::cout << "  Avg kernel:          " << stats.avg(stats.kernel_ms) << " ms/batch\n";
+            std::cout << "  Avg count read:      " << stats.avg(stats.count_read_ms) << " ms/batch\n";
+            std::cout << "  Avg result read:     " << stats.avg(stats.result_read_ms) << " ms/batch\n";
+            std::cout << "  Avg host process:    " << stats.avg(stats.host_process_ms) << " ms/batch\n";
+        }
+        if (benchmark_json) {
+            std::ostringstream json;
+            json << std::fixed << std::setprecision(3)
+                 << "{"
+                 << "\"mode\":\"gpu\","
+                 << "\"pattern_type\":\"" << pattern_type << "\","
+                 << "\"pattern\":\"" << pattern_arg << "\","
+                 << "\"batch_size\":" << gpu_batch_size << ","
+                 << "\"batches\":" << stats.batches << ","
+                 << "\"attempts\":" << total_attempts << ","
+                 << "\"elapsed_sec\":" << total_elapsed << ","
+                 << "\"addr_per_sec\":" << (total_elapsed > 0.0 ? total_attempts / total_elapsed : 0.0) << ","
+                 << "\"matches_found\":" << total_matches << ","
+                 << "\"gpu_matches_returned\":" << stats.matches_returned << ","
+                 << "\"avg_seed_generation_ms\":" << stats.avg(stats.seed_generation_ms) << ","
+                 << "\"avg_seed_upload_ms\":" << stats.avg(stats.seed_upload_ms) << ","
+                 << "\"avg_counter_reset_ms\":" << stats.avg(stats.counter_reset_ms) << ","
+                 << "\"avg_kernel_ms\":" << stats.avg(stats.kernel_ms) << ","
+                 << "\"avg_count_read_ms\":" << stats.avg(stats.count_read_ms) << ","
+                 << "\"avg_result_read_ms\":" << stats.avg(stats.result_read_ms) << ","
+                 << "\"avg_host_process_ms\":" << stats.avg(stats.host_process_ms)
+                 << "}";
+            std::cout << "\nBENCHMARK_JSON " << json.str() << "\n";
+        }
+    }
+
     std::cout << "═══════════════════════════════════════════════════════════════\n";
 
     return 0;

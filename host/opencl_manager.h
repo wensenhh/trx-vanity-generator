@@ -78,6 +78,9 @@ public:
     void enqueue_nd_range(cl_kernel kernel, cl_uint work_dim,
                           const size_t* global_work_size,
                           const size_t* local_work_size);
+    double enqueue_nd_range_timed_ms(cl_kernel kernel, cl_uint work_dim,
+                                     const size_t* global_work_size,
+                                     const size_t* local_work_size);
     void finish();
 
     // Info
