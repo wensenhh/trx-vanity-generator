@@ -236,6 +236,7 @@ void OpenCLManager::select_best_device() {
 }
 
 void OpenCLManager::load_kernel(const std::string& kernel_name, const std::string& source_path) {
+    (void)kernel_name;
     std::ifstream file(source_path);
     if (!file.is_open()) {
         throw OpenCLException("Failed to open kernel file: " + source_path);
@@ -256,6 +257,7 @@ void OpenCLManager::load_kernel(const std::string& kernel_name, const std::strin
 }
 
 void OpenCLManager::load_kernel_from_source(const std::string& kernel_name, const std::string& source) {
+    (void)kernel_name;
     const char* source_ptr = source.c_str();
     size_t source_len = source.length();
 
@@ -325,6 +327,18 @@ void OpenCLManager::read_buffer(cl_mem buffer, size_t size, void* ptr, bool bloc
                                      0, size, ptr, 0, nullptr, nullptr);
     if (err != CL_SUCCESS) {
         throw OpenCLException(err, "Failed to read buffer");
+    }
+}
+
+void OpenCLManager::fill_buffer(cl_mem buffer, const void* pattern, size_t pattern_size,
+                                size_t size, bool blocking) {
+    cl_int err = clEnqueueFillBuffer(queue_, buffer, pattern, pattern_size,
+                                     0, size, 0, nullptr, nullptr);
+    if (err != CL_SUCCESS) {
+        throw OpenCLException(err, "Failed to fill buffer");
+    }
+    if (blocking) {
+        finish();
     }
 }
 

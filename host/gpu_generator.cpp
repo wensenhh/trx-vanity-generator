@@ -163,9 +163,12 @@ size_t GPUGenerator::auto_tune_batch_size() {
                     seeds[i].s[3] = seed[3];
                 }
 
-                cl_->write_buffer(seeds_buffer, seeds_size, seeds.data(), true);
+                // Queue seed upload + counter reset asynchronously. The in-order
+                // command queue preserves upload -> reset -> kernel -> readback,
+                // while the final blocking read below is the only host sync point.
+                cl_->write_buffer(seeds_buffer, seeds_size, seeds.data(), false);
                 cl_uint zero = 0;
-                cl_->write_buffer(match_count_buffer, sizeof(cl_uint), &zero, true);
+                cl_->fill_buffer(match_count_buffer, &zero, sizeof(cl_uint), sizeof(cl_uint), false);
                 cl_->enqueue_nd_range_timed_ms(kernel_, 1, &global_size, &local_size);
 
                 cl_uint match_count = 0;
@@ -328,16 +331,19 @@ void GPUGenerator::generation_loop() {
         auto step_end = std::chrono::steady_clock::now();
         batch_stats.seed_generation_ms = elapsed_ms(step_start, step_end);
 
-        // Upload seeds
+        // Upload seeds. Keep this non-blocking; this queue is in-order, so the
+        // subsequent counter reset, kernel launch, and blocking readback provide
+        // correct ordering with one synchronization point per batch.
         step_start = std::chrono::steady_clock::now();
-        cl_->write_buffer(seeds_buffer_, seeds.size() * sizeof(cl_uint4), seeds.data(), true);
+        cl_->write_buffer(seeds_buffer_, seeds.size() * sizeof(cl_uint4), seeds.data(), false);
         step_end = std::chrono::steady_clock::now();
         batch_stats.seed_upload_ms = elapsed_ms(step_start, step_end);
 
-        // Reset match count
+        // Reset match count on-device instead of doing a blocking 4-byte host
+        // write. This removes a tiny-but-costly sync from every no-match batch.
         cl_uint zero = 0;
         step_start = std::chrono::steady_clock::now();
-        cl_->write_buffer(match_count_buffer_, sizeof(cl_uint), &zero, true);
+        cl_->fill_buffer(match_count_buffer_, &zero, sizeof(cl_uint), sizeof(cl_uint), false);
         step_end = std::chrono::steady_clock::now();
         batch_stats.counter_reset_ms = elapsed_ms(step_start, step_end);
 
@@ -355,7 +361,6 @@ void GPUGenerator::generation_loop() {
         } else {
             step_start = std::chrono::steady_clock::now();
             cl_->enqueue_nd_range(kernel_, 1, &global_size, &local_size);
-            cl_->finish();
             step_end = std::chrono::steady_clock::now();
             batch_stats.kernel_ms = elapsed_ms(step_start, step_end);
         }
@@ -376,7 +381,7 @@ void GPUGenerator::generation_loop() {
             }
             step_start = std::chrono::steady_clock::now();
             cl_->read_buffer(results_buffer_, match_count * sizeof(GPUMatchResult),
-                            gpu_results.data(), true);
+                            gpu_results.data(), false);
             cl_->read_buffer(addresses_buffer_, match_count * TRX_ADDRESS_SIZE * sizeof(cl_uchar),
                             gpu_addresses.data(), true);
             step_end = std::chrono::steady_clock::now();

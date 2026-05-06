@@ -73,6 +73,8 @@ public:
     void release_buffer(cl_mem buffer);
     void write_buffer(cl_mem buffer, size_t size, const void* ptr, bool blocking = true);
     void read_buffer(cl_mem buffer, size_t size, void* ptr, bool blocking = true);
+    void fill_buffer(cl_mem buffer, const void* pattern, size_t pattern_size,
+                     size_t size, bool blocking = true);
 
     // Execution
     void enqueue_nd_range(cl_kernel kernel, cl_uint work_dim,
