@@ -60,6 +60,7 @@ public:
 
     // Program management
     void load_kernel(const std::string& kernel_name, const std::string& source_path);
+    void load_kernel_from_source(const std::string& kernel_name, const std::string& source);
     void build_program(const std::string& options = "-cl-std=CL1.2 -Werror");
 
     // Kernel execution

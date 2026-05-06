@@ -251,6 +251,17 @@ void OpenCLManager::load_kernel(const std::string& kernel_name, const std::strin
     }
 }
 
+void OpenCLManager::load_kernel_from_source(const std::string& kernel_name, const std::string& source) {
+    const char* source_ptr = source.c_str();
+    size_t source_len = source.length();
+
+    cl_int err;
+    program_ = clCreateProgramWithSource(context_, 1, &source_ptr, &source_len, &err);
+    if (err != CL_SUCCESS) {
+        throw OpenCLException(err, "Failed to create program from source");
+    }
+}
+
 void OpenCLManager::build_program(const std::string& options) {
     cl_int err = clBuildProgram(program_, 1, &device_, options.c_str(), nullptr, nullptr);
     if (err != CL_SUCCESS) {

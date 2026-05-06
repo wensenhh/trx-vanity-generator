@@ -17,12 +17,12 @@ typedef struct {
 } jacobian_point;
 
 // secp256k1 prime p = 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
-constant uint256 SECP256K1_P = {{0xFFFFFFFFFFFFFFFFUL, 0xFFFFFFFFFFFFFFFEUL, 0xFFFFFFFFFFFFFFFFUL, 0xFFFFFFFFFFFFFFFFUL}};
+constant uint256 SECP256K1_P = {{0xFFFFFFFEFFFFFC2FUL, 0xFFFFFFFFFFFFFFFFUL, 0xFFFFFFFFFFFFFFFFUL, 0xFFFFFFFFFFFFFFFFUL}};
 constant uint256 SECP256K1_N = {{0xBFD25E8CD0364141UL, 0xBAAEDCE6AF48A03BUL, 0xFFFFFFFFFFFFFFFEUL, 0xFFFFFFFFFFFFFFFFUL}};
 
 // Generator point
 constant uint256 SECP256K1_GX = {{0x59F2815B16F81798UL, 0x029BFCDB2DCE28D9UL, 0x55A06295CE870B07UL, 0x79BE667EF9DCBBACUL}};
-constant uint256 SECP256K1_GY = {{0x9C47D08FFB10D4B8UL, 0xFD17B448A6855419UL, 0x5C6A30C994A29846UL, 0x483ADA7726A3C465UL}};
+constant uint256 SECP256K1_GY = {{0x9C47D08FFB10D4B8UL, 0xFD17B448A6855419UL, 0x5DA4FBFC0E1108A8UL, 0x483ADA7726A3C465UL}};
 
 // ============================================================================
 // uint256 Helper Functions
@@ -380,8 +380,8 @@ void uint256_mod_exp(uint256* result, const uint256* base, const uint256* exp, c
 void uint256_mod_inverse(uint256* result, const uint256* a, const uint256* p) {
     // p-2 for secp256k1
     uint256 p_minus_2;
-    p_minus_2.d[0] = 0xFFFFFFFFFFFFFFFDUL;
-    p_minus_2.d[1] = 0xFFFFFFFFFFFFFFFEUL;
+    p_minus_2.d[0] = 0xFFFFFFFEFFFFFC2DUL;
+    p_minus_2.d[1] = 0xFFFFFFFFFFFFFFFFUL;
     p_minus_2.d[2] = 0xFFFFFFFFFFFFFFFFUL;
     p_minus_2.d[3] = 0xFFFFFFFFFFFFFFFFUL;
     uint256_mod_exp(result, a, &p_minus_2, p);

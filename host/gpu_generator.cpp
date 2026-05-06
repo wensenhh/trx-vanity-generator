@@ -54,6 +54,16 @@ void GPUGenerator::initialize() {
     std::cout << "  Max Work Group: " << device.max_work_group_size << "\n";
     std::cout << "  Global Memory: " << (device.global_mem_size / (1024*1024)) << " MB\n\n";
 
+    if (config_.work_group_size == 0) {
+        config_.work_group_size = std::min<size_t>(256, device.max_work_group_size);
+    }
+    if (config_.batch_size == 0) {
+        config_.batch_size = 65536;
+    }
+
+    std::cout << "Config: batch_size=" << config_.batch_size
+              << ", work_group_size=" << config_.work_group_size << "\n\n";
+
     // Load Phase 3 full GPU kernel
     cl_->load_kernel("generate_addresses_full_gpu", "/Users/vincen/Vincen/code/trx_addr/kernel/vanity.cl");
     cl_->build_program("-cl-std=CL1.2 -Werror -DUSE_OPENCL=1");
