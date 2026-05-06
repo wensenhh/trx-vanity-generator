@@ -104,12 +104,17 @@ if(OpenCL_FOUND AND USE_OPENCL)
     endforeach()
 endif()
 
-# ECC test executable
+# ECC/GPU test executables
 if(OpenCL_FOUND AND USE_OPENCL)
     add_executable(test_ecc tests/test_ecc.cpp utils/crypto.cpp utils/rng.cpp host/opencl_manager.cpp)
     target_link_libraries(test_ecc OpenSSL::SSL OpenSSL::Crypto Threads::Threads ${OpenCL_LIBRARIES})
     target_include_directories(test_ecc PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
     target_compile_options(test_ecc PRIVATE -Wall -Wextra -O3 -march=native)
+
+    add_executable(test_gpu_filter tests/test_gpu_filter.cpp utils/crypto.cpp host/opencl_manager.cpp)
+    target_link_libraries(test_gpu_filter OpenSSL::SSL OpenSSL::Crypto Threads::Threads ${OpenCL_LIBRARIES})
+    target_include_directories(test_gpu_filter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
+    target_compile_options(test_gpu_filter PRIVATE -Wall -Wextra -O3 -march=native)
 endif()
 
 # Tests
@@ -119,14 +124,17 @@ if(BUILD_TESTS)
     if(TARGET test_ecc)
         add_test(NAME ecc_correctness COMMAND test_ecc)
     endif()
+    if(TARGET test_gpu_filter)
+        add_test(NAME gpu_base58_filter COMMAND test_gpu_filter)
+    endif()
 
     add_test(NAME cli_cpu_smoke
-        COMMAND trx_vanity prefix T --max-attempts 64 -t 1)
+        COMMAND trx_vanity contains T --max-attempts 64 -t 1)
     set_tests_properties(cli_cpu_smoke PROPERTIES TIMEOUT 10)
 
     if(TARGET test_ecc)
         add_test(NAME cli_gpu_smoke
-            COMMAND trx_vanity prefix T --gpu --batch-size 64 --batches 1)
+            COMMAND trx_vanity contains T --gpu --batch-size 64 --batches 1)
         set_tests_properties(cli_gpu_smoke PROPERTIES TIMEOUT 20)
     endif()
 endif()

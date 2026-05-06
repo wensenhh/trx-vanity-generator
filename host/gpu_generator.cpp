@@ -47,7 +47,8 @@ GPUGenerator::GPUGenerator()
     , seeds_buffer_(nullptr)
     , results_buffer_(nullptr)
     , addresses_buffer_(nullptr)
-    , match_count_buffer_(nullptr) {}
+    , match_count_buffer_(nullptr)
+    , pattern_buffer_(nullptr) {}
 
 GPUGenerator::~GPUGenerator() {
     stop();
@@ -56,6 +57,7 @@ GPUGenerator::~GPUGenerator() {
         cl_->release_buffer(results_buffer_);
         cl_->release_buffer(addresses_buffer_);
         cl_->release_buffer(match_count_buffer_);
+        cl_->release_buffer(pattern_buffer_);
     }
 }
 
@@ -115,18 +117,29 @@ void GPUGenerator::initialize() {
     size_t results_size = config_.batch_size * sizeof(GPUMatchResult);
     size_t addresses_size = config_.batch_size * TRX_ADDRESS_SIZE * sizeof(cl_uchar);
     size_t match_count_size = sizeof(cl_uint);
+    size_t pattern_size = config_.gpu_pattern_chars.size() * sizeof(cl_uchar);
 
     seeds_buffer_ = cl_->create_buffer(CL_MEM_READ_ONLY, seeds_size);
     results_buffer_ = cl_->create_buffer(CL_MEM_WRITE_ONLY, results_size);
     addresses_buffer_ = cl_->create_buffer(CL_MEM_WRITE_ONLY, addresses_size);
     match_count_buffer_ = cl_->create_buffer(CL_MEM_READ_WRITE, match_count_size);
+    pattern_buffer_ = cl_->create_buffer(CL_MEM_READ_ONLY, pattern_size);
 
-    // Set kernel args (0=seeds, 1=results, 2=match_count, 3=addresses_out, 4=batch_size)
+    cl_->write_buffer(pattern_buffer_, pattern_size, config_.gpu_pattern_chars.data(), true);
+
+    // Set kernel args (0=seeds, 1=results, 2=match_count, 3=addresses_out,
+    // 4=batch_size, 5=pattern_type, 6=pattern_len, 7=pattern_chars)
+    cl_uint batch_size_arg = static_cast<cl_uint>(config_.batch_size);
+    cl_uint pattern_type_arg = static_cast<cl_uint>(config_.gpu_pattern_type);
+    cl_uint pattern_len_arg = static_cast<cl_uint>(config_.gpu_pattern_len);
     cl_->set_kernel_arg_buffer(kernel_, 0, seeds_buffer_);
     cl_->set_kernel_arg_buffer(kernel_, 1, results_buffer_);
     cl_->set_kernel_arg_buffer(kernel_, 2, match_count_buffer_);
     cl_->set_kernel_arg_buffer(kernel_, 3, addresses_buffer_);
-    cl_->set_kernel_arg(kernel_, 4, sizeof(cl_uint), &config_.batch_size);
+    cl_->set_kernel_arg(kernel_, 4, sizeof(cl_uint), &batch_size_arg);
+    cl_->set_kernel_arg(kernel_, 5, sizeof(cl_uint), &pattern_type_arg);
+    cl_->set_kernel_arg(kernel_, 6, sizeof(cl_uint), &pattern_len_arg);
+    cl_->set_kernel_arg_buffer(kernel_, 7, pattern_buffer_);
 }
 
 void GPUGenerator::upload_pattern_data() {
@@ -278,7 +291,7 @@ void GPUGenerator::process_gpu_results(
             result.address = address;
             result.private_key_hex = private_key_hex;
             result.pattern_matched = patterns.empty() ? "" : patterns[0];
-            result.attempts = total_attempts_.load();
+            result.attempts = total_attempts_.load() + gpu_result.reserved[0] + 1;
 
             {
                 std::lock_guard<std::mutex> lock(results_mutex_);

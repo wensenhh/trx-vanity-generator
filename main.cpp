@@ -10,6 +10,7 @@
 #include <thread>
 #include <csignal>
 #include <fstream>
+#include <algorithm>
 
 using namespace trx;
 
@@ -139,6 +140,37 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "Output:  " << (output_file.empty() ? "stdout" : output_file) << "\n\n";
 
+    GPUGenerationConfig gpu_config;
+    if (pattern_type == "consecutive") {
+        gpu_config.gpu_pattern_type = 0; // suffix
+        std::string target(std::stoul(pattern_arg2.empty() ? "7" : pattern_arg2), pattern_arg[0]);
+        gpu_config.gpu_pattern_len = static_cast<uint32_t>(std::min<size_t>(target.size(), gpu_config.gpu_pattern_chars.size()));
+        std::copy_n(target.begin(), gpu_config.gpu_pattern_len, gpu_config.gpu_pattern_chars.begin());
+    } else if (pattern_type == "sequential") {
+        gpu_config.gpu_pattern_type = 0; // suffix
+        size_t length = std::stoul(pattern_arg2.empty() ? "7" : pattern_arg2);
+        std::string target;
+        target.reserve(length);
+        char current = pattern_arg[0];
+        for (size_t j = 0; j < length; ++j) {
+            target.push_back(current++);
+        }
+        gpu_config.gpu_pattern_len = static_cast<uint32_t>(std::min<size_t>(target.size(), gpu_config.gpu_pattern_chars.size()));
+        std::copy_n(target.begin(), gpu_config.gpu_pattern_len, gpu_config.gpu_pattern_chars.begin());
+    } else if (pattern_type == "suffix") {
+        gpu_config.gpu_pattern_type = 0;
+        gpu_config.gpu_pattern_len = static_cast<uint32_t>(std::min<size_t>(pattern_arg.size(), gpu_config.gpu_pattern_chars.size()));
+        std::copy_n(pattern_arg.begin(), gpu_config.gpu_pattern_len, gpu_config.gpu_pattern_chars.begin());
+    } else if (pattern_type == "prefix") {
+        gpu_config.gpu_pattern_type = 1;
+        gpu_config.gpu_pattern_len = static_cast<uint32_t>(std::min<size_t>(pattern_arg.size(), gpu_config.gpu_pattern_chars.size()));
+        std::copy_n(pattern_arg.begin(), gpu_config.gpu_pattern_len, gpu_config.gpu_pattern_chars.begin());
+    } else if (pattern_type == "contains") {
+        gpu_config.gpu_pattern_type = 2;
+        gpu_config.gpu_pattern_len = static_cast<uint32_t>(std::min<size_t>(pattern_arg.size(), gpu_config.gpu_pattern_chars.size()));
+        std::copy_n(pattern_arg.begin(), gpu_config.gpu_pattern_len, gpu_config.gpu_pattern_chars.begin());
+    }
+
     // Setup generator
     std::unique_ptr<CPUGenerator> cpu_generator;
     std::unique_ptr<GPUGenerator> gpu_generator;
@@ -146,7 +178,6 @@ int main(int argc, char* argv[]) {
     if (use_gpu) {
         gpu_generator = std::make_unique<GPUGenerator>();
         gpu_generator->set_pattern(std::move(pattern));
-        GPUGenerationConfig gpu_config;
         gpu_config.batch_size = gpu_batch_size;
         gpu_config.work_group_size = DEFAULT_WORK_GROUP_SIZE;
         gpu_config.num_batches = gpu_num_batches;

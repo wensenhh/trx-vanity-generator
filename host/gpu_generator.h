@@ -10,6 +10,7 @@
 #include <thread>
 #include <vector>
 #include <memory>
+#include <array>
 
 namespace trx {
 
@@ -26,6 +27,14 @@ struct GPUGenerationConfig {
     int device_idx = -1;              // -1 = auto
     bool verify_gpu_results = false;  // Recompute matched GPU addresses on CPU for debugging
     bool verbose = false;
+
+    // Exact GPU-side Base58Check filter. The host still verifies matches before
+    // writing them out, but the hot path no longer transfers every address.
+    // Type values are intentionally kernel ABI values, not PatternType ordinals:
+    // 0=suffix, 1=prefix-after-leading-T, 2=contains.
+    uint32_t gpu_pattern_type = 0;
+    uint32_t gpu_pattern_len = 0;
+    std::array<uint8_t, 20> gpu_pattern_chars{};
 };
 
 class GPUGenerator {
@@ -74,6 +83,7 @@ private:
     cl_mem results_buffer_;
     cl_mem addresses_buffer_;
     cl_mem match_count_buffer_;
+    cl_mem pattern_buffer_;
 
     // Pattern
     MultiPatternMatcher matcher_;
