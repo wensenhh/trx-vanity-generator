@@ -125,7 +125,7 @@ __kernel void generate_addresses(
     }
 
     uint idx = atomic_inc(match_count);
-    if (idx < 1024) {
+    if (idx < batch_size) {
         results[idx].seed[0] = seeds[gid].x;
         results[idx].seed[1] = seeds[gid].y;
         results[idx].seed[2] = seeds[gid].z;
@@ -223,15 +223,16 @@ __kernel void generate_addresses_full_gpu(
 
     if (is_match) {
         uint idx = atomic_inc(match_count);
-        if (idx < 1024) {
+        if (idx < batch_size) {
             results[idx].seed[0] = seeds[gid].x;
-        results[idx].seed[1] = seeds[gid].y;
-        results[idx].seed[2] = seeds[gid].z;
-        results[idx].seed[3] = seeds[gid].w;
-        results[idx].match_type = 0;
-        results[idx].reserved[0] = 0;
-        results[idx].reserved[1] = 0;
-        results[idx].reserved[2] = 0;
+            results[idx].seed[1] = seeds[gid].y;
+            results[idx].seed[2] = seeds[gid].z;
+            results[idx].seed[3] = seeds[gid].w;
+            results[idx].match_type = 0;
+            results[idx].reserved[0] = 0;
+            results[idx].reserved[1] = 0;
+            results[idx].reserved[2] = 0;
+
             // Copy address bytes to output
             for (int i = 0; i < 21; i++) {
                 addresses_out[idx * 21 + i] = address_bytes[i];

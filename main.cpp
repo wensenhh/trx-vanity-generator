@@ -42,6 +42,8 @@ void print_usage(const char* prog) {
               << "  contains <string>             - e.g., contains 520\n\n"
               << "Options:\n"
               << "  --gpu                 Use GPU acceleration (OpenCL)\n"
+              << "  --batch-size <n>      GPU addresses per batch (default: 65536)\n"
+              << "  --batches <n>         GPU batch count, then stop (default: 0=infinite)\n"
               << "  -t, --threads <n>     Number of CPU threads (default: auto)\n"
               << "  -o, --output <file>   Output file for matches\n"
               << "  -v, --verbose         Show progress every second\n"
@@ -71,6 +73,8 @@ int main(int argc, char* argv[]) {
 
     // Add GPU mode CLI flag
     bool use_gpu = false;
+    size_t gpu_batch_size = DEFAULT_BATCH_SIZE;
+    size_t gpu_num_batches = 0;
 
     for (int i = 3; i < argc; ++i) {
         std::string arg = argv[i];
@@ -85,6 +89,10 @@ int main(int argc, char* argv[]) {
             return 0;
         } else if (arg == "--gpu") {
             use_gpu = true;
+        } else if (arg == "--batch-size" && i + 1 < argc) {
+            gpu_batch_size = std::stoull(argv[++i]);
+        } else if (arg == "--batches" && i + 1 < argc) {
+            gpu_num_batches = std::stoull(argv[++i]);
         } else if (i == 3 && (pattern_type == "consecutive" || pattern_type == "sequential")) {
             pattern_arg2 = arg;
         }
@@ -131,8 +139,10 @@ int main(int argc, char* argv[]) {
         gpu_generator = std::make_unique<GPUGenerator>();
         gpu_generator->set_pattern(std::move(pattern));
         GPUGenerationConfig gpu_config;
-        gpu_config.batch_size = 65536;
-        gpu_config.work_group_size = 256;
+        gpu_config.batch_size = gpu_batch_size;
+        gpu_config.work_group_size = DEFAULT_WORK_GROUP_SIZE;
+        gpu_config.num_batches = gpu_num_batches;
+        gpu_config.verbose = verbose;
         gpu_generator->set_config(gpu_config);
         gpu_generator->initialize();
     } else {

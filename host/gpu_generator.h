@@ -61,7 +61,6 @@ private:
         const std::vector<GPUMatchResult>& gpu_results,
         const std::vector<cl_uchar>& gpu_addresses,
         cl_uint count,
-        const std::vector<cl_uint4>& seeds,
         Secp256k1& ecc,
         RNG& rng
     );

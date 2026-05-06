@@ -5,8 +5,42 @@
 #include <fstream>
 #include <chrono>
 #include <cstring>
+#include <algorithm>
+#include <cstdlib>
+#include <filesystem>
+#include <stdexcept>
 
 namespace trx {
+
+namespace {
+
+std::string find_vanity_kernel_path() {
+    namespace fs = std::filesystem;
+
+    std::vector<fs::path> candidates;
+    if (const char* env_dir = std::getenv("TRX_KERNEL_DIR")) {
+        candidates.emplace_back(fs::path(env_dir) / "vanity.cl");
+    }
+
+    const fs::path cwd = fs::current_path();
+    candidates.emplace_back(cwd / "kernel" / "vanity.cl"); // source-tree execution
+    candidates.emplace_back(cwd / "vanity.cl");              // build-dir execution
+    candidates.emplace_back(cwd / ".." / "kernel" / "vanity.cl");
+
+    for (const auto& candidate : candidates) {
+        std::error_code ec;
+        if (fs::exists(candidate, ec)) {
+            return fs::canonical(candidate, ec).string();
+        }
+    }
+
+    throw std::runtime_error(
+        "Unable to locate OpenCL kernel vanity.cl. Run from the project root/build "
+        "directory, or set TRX_KERNEL_DIR to the kernel directory."
+    );
+}
+
+} // namespace
 
 GPUGenerator::GPUGenerator()
     : kernel_(nullptr)
@@ -64,16 +98,22 @@ void GPUGenerator::initialize() {
     std::cout << "Config: batch_size=" << config_.batch_size
               << ", work_group_size=" << config_.work_group_size << "\n\n";
 
-    // Load Phase 3 full GPU kernel
-    cl_->load_kernel("generate_addresses_full_gpu", "/Users/vincen/Vincen/code/trx_addr/kernel/vanity.cl");
+    // Load Phase 3 full GPU kernel. The path is resolved at runtime so the
+    // binary works from the source tree, build directory, install location with
+    // TRX_KERNEL_DIR, and tests/CI workdirs.
+    const std::string kernel_path = find_vanity_kernel_path();
+    cl_->load_kernel("generate_addresses_full_gpu", kernel_path);
     cl_->build_program("-cl-std=CL1.2 -Werror -DUSE_OPENCL=1");
 
     kernel_ = cl_->get_kernel("generate_addresses_full_gpu");
 
-    // Create buffers
+    // Create buffers. The current full-GPU kernel returns every generated
+    // address for CPU-side Base58 verification (no GPU prefilter yet), so the
+    // result buffers must be able to hold the whole batch. A smaller fixed cap
+    // silently drops candidates and creates false negatives.
     size_t seeds_size = config_.batch_size * sizeof(cl_uint4);
-    size_t results_size = MAX_RESULTS_PER_BATCH * sizeof(GPUMatchResult);
-    size_t addresses_size = MAX_RESULTS_PER_BATCH * TRX_ADDRESS_SIZE * sizeof(cl_uchar);
+    size_t results_size = config_.batch_size * sizeof(GPUMatchResult);
+    size_t addresses_size = config_.batch_size * TRX_ADDRESS_SIZE * sizeof(cl_uchar);
     size_t match_count_size = sizeof(cl_uint);
 
     seeds_buffer_ = cl_->create_buffer(CL_MEM_READ_ONLY, seeds_size);
@@ -120,8 +160,8 @@ void GPUGenerator::generation_loop() {
     RNG rng;
     Secp256k1 ecc;
     std::vector<cl_uint4> seeds(config_.batch_size);
-    std::vector<GPUMatchResult> gpu_results(MAX_RESULTS_PER_BATCH);
-    std::vector<cl_uchar> gpu_addresses(MAX_RESULTS_PER_BATCH * TRX_ADDRESS_SIZE);
+    std::vector<GPUMatchResult> gpu_results(config_.batch_size);
+    std::vector<cl_uchar> gpu_addresses(config_.batch_size * TRX_ADDRESS_SIZE);
 
     while (!stop_requested_.load()) {
         // Generate seeds for this batch
@@ -157,14 +197,19 @@ void GPUGenerator::generation_loop() {
         cl_->read_buffer(match_count_buffer_, sizeof(cl_uint), &match_count, true);
 
         if (match_count > 0) {
-            match_count = std::min(match_count, static_cast<cl_uint>(MAX_RESULTS_PER_BATCH));
+            if (match_count > config_.batch_size) {
+                std::cerr << "WARNING: GPU returned match_count=" << match_count
+                          << " greater than batch_size=" << config_.batch_size
+                          << "; clamping readback to allocated buffer size\n";
+                match_count = static_cast<cl_uint>(config_.batch_size);
+            }
             cl_->read_buffer(results_buffer_, match_count * sizeof(GPUMatchResult),
                             gpu_results.data(), true);
             cl_->read_buffer(addresses_buffer_, match_count * TRX_ADDRESS_SIZE * sizeof(cl_uchar),
                             gpu_addresses.data(), true);
 
             // Process GPU results on CPU (full verification)
-            process_gpu_results(gpu_results, gpu_addresses, match_count, seeds, ecc, rng);
+            process_gpu_results(gpu_results, gpu_addresses, match_count, ecc, rng);
         }
 
         total_attempts_ += config_.batch_size;
@@ -174,13 +219,14 @@ void GPUGenerator::generation_loop() {
             break;
         }
     }
+
+    running_ = false;
 }
 
 void GPUGenerator::process_gpu_results(
     const std::vector<GPUMatchResult>& gpu_results,
     const std::vector<cl_uchar>& gpu_addresses,
     cl_uint count,
-    const std::vector<cl_uint4>& seeds,
     Secp256k1& ecc,
     RNG& rng
 ) {
