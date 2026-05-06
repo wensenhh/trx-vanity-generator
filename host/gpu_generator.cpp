@@ -335,17 +335,31 @@ void GPUGenerator::generation_loop() {
         // subsequent counter reset, kernel launch, and blocking readback provide
         // correct ordering with one synchronization point per batch.
         step_start = std::chrono::steady_clock::now();
-        cl_->write_buffer(seeds_buffer_, seeds.size() * sizeof(cl_uint4), seeds.data(), false);
+        if (config_.profile) {
+            batch_stats.seed_upload_ms = cl_->write_buffer_timed_ms(
+                seeds_buffer_, seeds.size() * sizeof(cl_uint4), seeds.data());
+        } else {
+            cl_->write_buffer(seeds_buffer_, seeds.size() * sizeof(cl_uint4), seeds.data(), false);
+        }
         step_end = std::chrono::steady_clock::now();
-        batch_stats.seed_upload_ms = elapsed_ms(step_start, step_end);
+        if (!config_.profile) {
+            batch_stats.seed_upload_ms = elapsed_ms(step_start, step_end);
+        }
 
         // Reset match count on-device instead of doing a blocking 4-byte host
         // write. This removes a tiny-but-costly sync from every no-match batch.
         cl_uint zero = 0;
         step_start = std::chrono::steady_clock::now();
-        cl_->fill_buffer(match_count_buffer_, &zero, sizeof(cl_uint), sizeof(cl_uint), false);
+        if (config_.profile) {
+            batch_stats.counter_reset_ms = cl_->fill_buffer_timed_ms(
+                match_count_buffer_, &zero, sizeof(cl_uint), sizeof(cl_uint));
+        } else {
+            cl_->fill_buffer(match_count_buffer_, &zero, sizeof(cl_uint), sizeof(cl_uint), false);
+        }
         step_end = std::chrono::steady_clock::now();
-        batch_stats.counter_reset_ms = elapsed_ms(step_start, step_end);
+        if (!config_.profile) {
+            batch_stats.counter_reset_ms = elapsed_ms(step_start, step_end);
+        }
 
         // Launch kernel
         size_t global_size = config_.batch_size;
@@ -368,9 +382,16 @@ void GPUGenerator::generation_loop() {
         // Read results
         cl_uint match_count = 0;
         step_start = std::chrono::steady_clock::now();
-        cl_->read_buffer(match_count_buffer_, sizeof(cl_uint), &match_count, true);
+        if (config_.profile) {
+            batch_stats.count_read_ms = cl_->read_buffer_timed_ms(
+                match_count_buffer_, sizeof(cl_uint), &match_count);
+        } else {
+            cl_->read_buffer(match_count_buffer_, sizeof(cl_uint), &match_count, true);
+        }
         step_end = std::chrono::steady_clock::now();
-        batch_stats.count_read_ms = elapsed_ms(step_start, step_end);
+        if (!config_.profile) {
+            batch_stats.count_read_ms = elapsed_ms(step_start, step_end);
+        }
 
         if (match_count > 0) {
             if (match_count > config_.batch_size) {
@@ -380,12 +401,21 @@ void GPUGenerator::generation_loop() {
                 match_count = static_cast<cl_uint>(config_.batch_size);
             }
             step_start = std::chrono::steady_clock::now();
-            cl_->read_buffer(results_buffer_, match_count * sizeof(GPUMatchResult),
-                            gpu_results.data(), false);
-            cl_->read_buffer(addresses_buffer_, match_count * TRX_ADDRESS_SIZE * sizeof(cl_uchar),
-                            gpu_addresses.data(), true);
+            if (config_.profile) {
+                batch_stats.result_read_ms += cl_->read_buffer_timed_ms(
+                    results_buffer_, match_count * sizeof(GPUMatchResult), gpu_results.data());
+                batch_stats.result_read_ms += cl_->read_buffer_timed_ms(
+                    addresses_buffer_, match_count * TRX_ADDRESS_SIZE * sizeof(cl_uchar), gpu_addresses.data());
+            } else {
+                cl_->read_buffer(results_buffer_, match_count * sizeof(GPUMatchResult),
+                                gpu_results.data(), false);
+                cl_->read_buffer(addresses_buffer_, match_count * TRX_ADDRESS_SIZE * sizeof(cl_uchar),
+                                gpu_addresses.data(), true);
+            }
             step_end = std::chrono::steady_clock::now();
-            batch_stats.result_read_ms = elapsed_ms(step_start, step_end);
+            if (!config_.profile) {
+                batch_stats.result_read_ms = elapsed_ms(step_start, step_end);
+            }
 
             // Process GPU results on CPU (full verification)
             step_start = std::chrono::steady_clock::now();

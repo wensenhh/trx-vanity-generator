@@ -6,6 +6,34 @@
 
 namespace trx {
 
+namespace {
+
+double event_duration_ms(cl_event event, const std::string& operation) {
+    cl_int err = clWaitForEvents(1, &event);
+    if (err != CL_SUCCESS) {
+        clReleaseEvent(event);
+        throw OpenCLException(err, "Failed waiting for timed " + operation);
+    }
+
+    cl_ulong start_ns = 0;
+    cl_ulong end_ns = 0;
+    err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(start_ns), &start_ns, nullptr);
+    if (err != CL_SUCCESS) {
+        clReleaseEvent(event);
+        throw OpenCLException(err, "Failed reading timed " + operation + " start time");
+    }
+    err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(end_ns), &end_ns, nullptr);
+    if (err != CL_SUCCESS) {
+        clReleaseEvent(event);
+        throw OpenCLException(err, "Failed reading timed " + operation + " end time");
+    }
+
+    clReleaseEvent(event);
+    return static_cast<double>(end_ns - start_ns) / 1000000.0;
+}
+
+} // namespace
+
 // ============================================================================
 // OpenCL Exception
 // ============================================================================
@@ -342,6 +370,35 @@ void OpenCLManager::fill_buffer(cl_mem buffer, const void* pattern, size_t patte
     }
 }
 
+double OpenCLManager::write_buffer_timed_ms(cl_mem buffer, size_t size, const void* ptr) {
+    cl_event event = nullptr;
+    cl_int err = clEnqueueWriteBuffer(queue_, buffer, CL_FALSE, 0, size, ptr, 0, nullptr, &event);
+    if (err != CL_SUCCESS) {
+        throw OpenCLException(err, "Failed to enqueue timed buffer write");
+    }
+    return event_duration_ms(event, "buffer write");
+}
+
+double OpenCLManager::read_buffer_timed_ms(cl_mem buffer, size_t size, void* ptr) {
+    cl_event event = nullptr;
+    cl_int err = clEnqueueReadBuffer(queue_, buffer, CL_FALSE, 0, size, ptr, 0, nullptr, &event);
+    if (err != CL_SUCCESS) {
+        throw OpenCLException(err, "Failed to enqueue timed buffer read");
+    }
+    return event_duration_ms(event, "buffer read");
+}
+
+double OpenCLManager::fill_buffer_timed_ms(cl_mem buffer, const void* pattern, size_t pattern_size,
+                                           size_t size) {
+    cl_event event = nullptr;
+    cl_int err = clEnqueueFillBuffer(queue_, buffer, pattern, pattern_size,
+                                     0, size, 0, nullptr, &event);
+    if (err != CL_SUCCESS) {
+        throw OpenCLException(err, "Failed to enqueue timed buffer fill");
+    }
+    return event_duration_ms(event, "buffer fill");
+}
+
 void OpenCLManager::enqueue_nd_range(cl_kernel kernel, cl_uint work_dim,
                                      const size_t* global_work_size,
                                      const size_t* local_work_size) {
@@ -364,27 +421,7 @@ double OpenCLManager::enqueue_nd_range_timed_ms(cl_kernel kernel, cl_uint work_d
         throw OpenCLException(err, "Failed to enqueue timed NDRange kernel");
     }
 
-    err = clWaitForEvents(1, &event);
-    if (err != CL_SUCCESS) {
-        clReleaseEvent(event);
-        throw OpenCLException(err, "Failed waiting for timed NDRange kernel");
-    }
-
-    cl_ulong start_ns = 0;
-    cl_ulong end_ns = 0;
-    err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(start_ns), &start_ns, nullptr);
-    if (err != CL_SUCCESS) {
-        clReleaseEvent(event);
-        throw OpenCLException(err, "Failed reading kernel profiling start time");
-    }
-    err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(end_ns), &end_ns, nullptr);
-    if (err != CL_SUCCESS) {
-        clReleaseEvent(event);
-        throw OpenCLException(err, "Failed reading kernel profiling end time");
-    }
-
-    clReleaseEvent(event);
-    return static_cast<double>(end_ns - start_ns) / 1000000.0;
+    return event_duration_ms(event, "NDRange kernel");
 }
 
 void OpenCLManager::finish() {

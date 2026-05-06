@@ -75,6 +75,10 @@ public:
     void read_buffer(cl_mem buffer, size_t size, void* ptr, bool blocking = true);
     void fill_buffer(cl_mem buffer, const void* pattern, size_t pattern_size,
                      size_t size, bool blocking = true);
+    double write_buffer_timed_ms(cl_mem buffer, size_t size, const void* ptr);
+    double read_buffer_timed_ms(cl_mem buffer, size_t size, void* ptr);
+    double fill_buffer_timed_ms(cl_mem buffer, const void* pattern, size_t pattern_size,
+                                size_t size);
 
     // Execution
     void enqueue_nd_range(cl_kernel kernel, cl_uint work_dim,
