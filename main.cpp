@@ -12,8 +12,20 @@
 #include <fstream>
 #include <algorithm>
 #include <sstream>
+#include <vector>
 
 using namespace trx;
+
+std::vector<size_t> parse_size_list(const std::string& csv) {
+    std::vector<size_t> values;
+    std::stringstream ss(csv);
+    std::string item;
+    while (std::getline(ss, item, ',')) {
+        if (item.empty()) continue;
+        values.push_back(std::stoull(item));
+    }
+    return values;
+}
 
 static std::atomic<bool> g_running{true};
 
@@ -45,6 +57,9 @@ void print_usage(const char* prog) {
               << "Options:\n"
               << "  --gpu                 Use GPU acceleration (OpenCL)\n"
               << "  --batch-size <n>      GPU addresses per batch (default: 65536)\n"
+              << "  --auto-tune           Benchmark candidate GPU batch sizes and use the fastest\n"
+              << "  --auto-tune-sizes <csv> Candidate batch sizes (default: 32768,65536,131072,262144,524288)\n"
+              << "  --auto-tune-batches <n> Batches per auto-tune candidate (default: 3)\n"
               << "  --batches <n>         GPU batch count, then stop (default: 0=infinite)\n"
               << "  --gpu-verify          Recompute matched GPU addresses on CPU for debugging\n"
               << "  --profile             Print GPU per-batch timing breakdown\n"
@@ -82,6 +97,9 @@ int main(int argc, char* argv[]) {
     bool gpu_verify = false;
     bool gpu_profile = false;
     bool benchmark_json = false;
+    bool gpu_auto_tune = false;
+    size_t gpu_auto_tune_batches = 3;
+    std::vector<size_t> gpu_auto_tune_candidates{32768, 65536, 131072, 262144, 524288};
     size_t gpu_batch_size = DEFAULT_BATCH_SIZE;
     size_t gpu_num_batches = 0;
     uint64_t max_attempts = 0;
@@ -105,6 +123,13 @@ int main(int argc, char* argv[]) {
             gpu_profile = true;
         } else if (arg == "--benchmark-json") {
             benchmark_json = true;
+        } else if (arg == "--auto-tune") {
+            use_gpu = true;
+            gpu_auto_tune = true;
+        } else if (arg == "--auto-tune-batches" && i + 1 < argc) {
+            gpu_auto_tune_batches = std::stoull(argv[++i]);
+        } else if (arg == "--auto-tune-sizes" && i + 1 < argc) {
+            gpu_auto_tune_candidates = parse_size_list(argv[++i]);
         } else if (arg == "--batch-size" && i + 1 < argc) {
             gpu_batch_size = std::stoull(argv[++i]);
         } else if (arg == "--batches" && i + 1 < argc) {
@@ -192,6 +217,9 @@ int main(int argc, char* argv[]) {
         gpu_config.num_batches = gpu_num_batches;
         gpu_config.verify_gpu_results = gpu_verify;
         gpu_config.profile = gpu_profile || benchmark_json;
+        gpu_config.auto_tune_batch_size = gpu_auto_tune;
+        gpu_config.auto_tune_batches = gpu_auto_tune_batches;
+        gpu_config.auto_tune_candidates = gpu_auto_tune_candidates;
         gpu_config.verbose = verbose;
         gpu_generator->set_config(gpu_config);
         gpu_generator->initialize();
@@ -306,13 +334,14 @@ int main(int argc, char* argv[]) {
             std::cout << "  Avg host process:    " << stats.avg(stats.host_process_ms) << " ms/batch\n";
         }
         if (benchmark_json) {
+            const size_t actual_gpu_batch_size = gpu_generator->get_batch_size();
             std::ostringstream json;
             json << std::fixed << std::setprecision(3)
                  << "{"
                  << "\"mode\":\"gpu\","
                  << "\"pattern_type\":\"" << pattern_type << "\","
                  << "\"pattern\":\"" << pattern_arg << "\","
-                 << "\"batch_size\":" << gpu_batch_size << ","
+                 << "\"batch_size\":" << actual_gpu_batch_size << ","
                  << "\"batches\":" << stats.batches << ","
                  << "\"attempts\":" << total_attempts << ","
                  << "\"elapsed_sec\":" << total_elapsed << ","

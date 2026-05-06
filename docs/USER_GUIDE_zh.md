@@ -235,6 +235,41 @@ GPU 每一批生成多少个地址。
 - 普通测试：`1024`、`4096`、`65536`
 - 跑不动 / 报显存相关错误：调小
 - 想压性能：慢慢调大
+- 不确定该设多少：用下面的 `--auto-tune` 自动选择
+
+---
+
+### `--auto-tune`
+
+GPU 自动测试多个 batch size，然后选择吞吐最高的那个继续运行。
+
+```bash
+./trx_vanity prefix ZZZ --gpu --auto-tune --batches 10 --profile --benchmark-json
+```
+
+默认会测试：`32768,65536,131072,262144,524288`。
+
+也可以自己指定候选值：
+
+```bash
+./trx_vanity prefix ZZZ --gpu --auto-tune --auto-tune-sizes 65536,131072,262144 --auto-tune-batches 2 --batches 10
+```
+
+参数说明：
+
+- `--auto-tune-sizes`：候选 batch size，用英文逗号分隔；
+- `--auto-tune-batches`：每个候选值测试几批，数字越大越稳定，但启动越慢；
+- auto-tune 结束后，程序会打印被选中的 batch size，并用它进入正式生成。
+
+---
+
+### `--profile` / `--benchmark-json`
+
+查看 GPU 分阶段耗时，或者输出机器可解析的 benchmark JSON。
+
+```bash
+./trx_vanity prefix ZZZ --gpu --batch-size 65536 --batches 3 --profile --benchmark-json
+```
 
 ---
 

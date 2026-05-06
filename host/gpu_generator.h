@@ -30,6 +30,9 @@ struct GPUGenerationConfig {
     int device_idx = -1;              // -1 = auto
     bool verify_gpu_results = false;  // Recompute matched GPU addresses on CPU for debugging
     bool profile = false;             // Collect per-batch timing for GPU benchmark/profiling
+    bool auto_tune_batch_size = false; // Benchmark candidate batch sizes before generation
+    size_t auto_tune_batches = 3;      // Batches per candidate during auto-tune
+    std::vector<size_t> auto_tune_candidates{32768, 65536, 131072, 262144, 524288};
     bool verbose = false;
 
     // Exact GPU-side Base58Check filter. The host still verifies matches before
@@ -81,6 +84,7 @@ public:
     uint64_t get_total_attempts() const { return total_attempts_.load(); }
     double get_rate() const;
     GPUProfileStats get_profile_stats() const;
+    size_t get_batch_size() const { return config_.batch_size; }
 
     // Callback
     using ResultCallback = std::function<void(const MatchResult&)>;
@@ -94,6 +98,7 @@ private:
         cl_uint count,
         RNG& rng
     );
+    size_t auto_tune_batch_size();
 
     // OpenCL
     std::unique_ptr<OpenCLManager> cl_;

@@ -9,6 +9,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <stdexcept>
+#include <limits>
+#include <iomanip>
 
 namespace trx {
 
@@ -84,6 +86,129 @@ void GPUGenerator::set_callback(ResultCallback cb) {
     callback_ = cb;
 }
 
+size_t GPUGenerator::auto_tune_batch_size() {
+    std::vector<size_t> candidates = config_.auto_tune_candidates;
+    candidates.erase(
+        std::remove_if(candidates.begin(), candidates.end(), [](size_t n) { return n == 0; }),
+        candidates.end()
+    );
+    std::sort(candidates.begin(), candidates.end());
+    candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
+
+    if (candidates.empty()) {
+        return config_.batch_size == 0 ? 65536 : config_.batch_size;
+    }
+
+    const size_t batches = std::max<size_t>(1, config_.auto_tune_batches);
+    const size_t local_size = std::max<size_t>(1, config_.work_group_size);
+    RNG rng;
+
+    std::cout << "GPU batch auto-tune: " << candidates.size()
+              << " candidate(s), " << batches << " batch(es) each\n";
+
+    size_t best_batch_size = candidates.front();
+    double best_rate = -std::numeric_limits<double>::infinity();
+
+    for (size_t candidate : candidates) {
+        std::vector<cl_uint4> seeds(candidate);
+        const size_t seeds_size = candidate * sizeof(cl_uint4);
+        const size_t results_size = candidate * sizeof(GPUMatchResult);
+        const size_t addresses_size = candidate * TRX_ADDRESS_SIZE * sizeof(cl_uchar);
+        const size_t match_count_size = sizeof(cl_uint);
+        const size_t pattern_size = config_.gpu_pattern_chars.size() * sizeof(cl_uchar);
+
+        cl_mem seeds_buffer = nullptr;
+        cl_mem results_buffer = nullptr;
+        cl_mem addresses_buffer = nullptr;
+        cl_mem match_count_buffer = nullptr;
+        cl_mem pattern_buffer = nullptr;
+
+        double total_ms = 0.0;
+        uint64_t matches_returned = 0;
+
+        try {
+            seeds_buffer = cl_->create_buffer(CL_MEM_READ_ONLY, seeds_size);
+            results_buffer = cl_->create_buffer(CL_MEM_WRITE_ONLY, results_size);
+            addresses_buffer = cl_->create_buffer(CL_MEM_WRITE_ONLY, addresses_size);
+            match_count_buffer = cl_->create_buffer(CL_MEM_READ_WRITE, match_count_size);
+            pattern_buffer = cl_->create_buffer(CL_MEM_READ_ONLY, pattern_size);
+
+            cl_->write_buffer(pattern_buffer, pattern_size, config_.gpu_pattern_chars.data(), true);
+
+            cl_uint batch_size_arg = static_cast<cl_uint>(candidate);
+            cl_uint pattern_type_arg = static_cast<cl_uint>(config_.gpu_pattern_type);
+            cl_uint pattern_len_arg = static_cast<cl_uint>(config_.gpu_pattern_len);
+            cl_->set_kernel_arg_buffer(kernel_, 0, seeds_buffer);
+            cl_->set_kernel_arg_buffer(kernel_, 1, results_buffer);
+            cl_->set_kernel_arg_buffer(kernel_, 2, match_count_buffer);
+            cl_->set_kernel_arg_buffer(kernel_, 3, addresses_buffer);
+            cl_->set_kernel_arg(kernel_, 4, sizeof(cl_uint), &batch_size_arg);
+            cl_->set_kernel_arg(kernel_, 5, sizeof(cl_uint), &pattern_type_arg);
+            cl_->set_kernel_arg(kernel_, 6, sizeof(cl_uint), &pattern_len_arg);
+            cl_->set_kernel_arg_buffer(kernel_, 7, pattern_buffer);
+
+            size_t global_size = candidate;
+            if (global_size % local_size != 0) {
+                global_size = ((global_size / local_size) + 1) * local_size;
+            }
+
+            for (size_t batch = 0; batch < batches; ++batch) {
+                auto batch_start = std::chrono::steady_clock::now();
+
+                for (size_t i = 0; i < candidate; ++i) {
+                    auto seed = rng.generate_seed();
+                    seeds[i].s[0] = seed[0];
+                    seeds[i].s[1] = seed[1];
+                    seeds[i].s[2] = seed[2];
+                    seeds[i].s[3] = seed[3];
+                }
+
+                cl_->write_buffer(seeds_buffer, seeds_size, seeds.data(), true);
+                cl_uint zero = 0;
+                cl_->write_buffer(match_count_buffer, sizeof(cl_uint), &zero, true);
+                cl_->enqueue_nd_range_timed_ms(kernel_, 1, &global_size, &local_size);
+
+                cl_uint match_count = 0;
+                cl_->read_buffer(match_count_buffer, sizeof(cl_uint), &match_count, true);
+                matches_returned += std::min<uint64_t>(match_count, static_cast<uint64_t>(candidate));
+
+                auto batch_end = std::chrono::steady_clock::now();
+                total_ms += elapsed_ms(batch_start, batch_end);
+            }
+        } catch (...) {
+            cl_->release_buffer(seeds_buffer);
+            cl_->release_buffer(results_buffer);
+            cl_->release_buffer(addresses_buffer);
+            cl_->release_buffer(match_count_buffer);
+            cl_->release_buffer(pattern_buffer);
+            throw;
+        }
+
+        cl_->release_buffer(seeds_buffer);
+        cl_->release_buffer(results_buffer);
+        cl_->release_buffer(addresses_buffer);
+        cl_->release_buffer(match_count_buffer);
+        cl_->release_buffer(pattern_buffer);
+
+        const double attempts = static_cast<double>(candidate * batches);
+        const double seconds = total_ms / 1000.0;
+        const double rate = seconds > 0.0 ? attempts / seconds : 0.0;
+        std::cout << "  batch_size=" << candidate
+                  << " rate=" << std::fixed << std::setprecision(0) << rate << " addr/s"
+                  << " avg_batch_ms=" << std::setprecision(3) << (total_ms / static_cast<double>(batches))
+                  << " gpu_matches=" << matches_returned << "\n";
+
+        if (rate > best_rate) {
+            best_rate = rate;
+            best_batch_size = candidate;
+        }
+    }
+
+    std::cout << "Auto-tune selected batch_size=" << best_batch_size
+              << " (" << std::fixed << std::setprecision(0) << best_rate << " addr/s)\n\n";
+    return best_batch_size;
+}
+
 void GPUGenerator::initialize() {
     cl_ = std::make_unique<OpenCLManager>();
     cl_->initialize();
@@ -113,6 +238,10 @@ void GPUGenerator::initialize() {
     cl_->build_program("-cl-std=CL1.2 -Werror -DUSE_OPENCL=1");
 
     kernel_ = cl_->get_kernel("generate_addresses_full_gpu");
+
+    if (config_.auto_tune_batch_size) {
+        config_.batch_size = auto_tune_batch_size();
+    }
 
     // Create buffers. The current full-GPU kernel returns every generated
     // address for CPU-side Base58 verification (no GPU prefilter yet), so the

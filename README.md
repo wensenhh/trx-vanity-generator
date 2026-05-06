@@ -40,7 +40,13 @@ cmake --build . --parallel
 ./trx_vanity suffix 8888888 --gpu --batch-size 65536
 ./trx_vanity prefix T --gpu --batches 1        # finite smoke run
 ./trx_vanity prefix T --gpu --gpu-verify       # debug CPU/GPU address checks
+./trx_vanity prefix ZZZ --gpu --auto-tune --batches 10 --profile --benchmark-json
 ```
+
+GPU batch auto-tune benchmarks candidate batch sizes on the selected device and
+uses the fastest result for the actual run. Override candidates with
+`--auto-tune-sizes 65536,131072,262144` and per-candidate sample count with
+`--auto-tune-batches <n>`.
 
 `TRX_KERNEL_DIR=/path/to/kernel` can be set when running the GPU binary outside
 the source/build tree so `vanity.cl` can be located.
