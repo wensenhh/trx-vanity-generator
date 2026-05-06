@@ -24,7 +24,7 @@ struct GPUGenerationConfig {
     size_t num_batches = 0;           // 0 = infinite
     int platform_idx = -1;            // -1 = auto
     int device_idx = -1;              // -1 = auto
-    bool verify_gpu_results = false;  // Recompute ECC on CPU for debugging
+    bool verify_gpu_results = false;  // Recompute matched GPU addresses on CPU for debugging
     bool verbose = false;
 };
 

@@ -234,20 +234,6 @@ void GPUGenerator::process_gpu_results(
     }
 
     for (cl_uint i = 0; i < count; ++i) {
-        const auto& gpu_result = gpu_results[i];
-
-        // Reconstruct seed
-        std::array<uint32_t, 4> seed = {
-            gpu_result.seed[0],
-            gpu_result.seed[1],
-            gpu_result.seed[2],
-            gpu_result.seed[3]
-        };
-
-        // Regenerate private key from seed
-        auto seed_bytes = rng.seed_to_bytes(seed);
-        auto private_key = rng.derive_private_key(seed_bytes);
-
         // Use the GPU-computed address for normal matching. Recomputing ECC on
         // the CPU for every candidate defeats the purpose of the full-GPU path;
         // keep it as an opt-in debug safeguard instead.
@@ -256,23 +242,37 @@ void GPUGenerator::process_gpu_results(
             address_bytes[j] = static_cast<uint8_t>(gpu_addresses[i * TRX_ADDRESS_SIZE + j]);
         }
 
-        if (config_.verify_gpu_results) {
-            auto public_key = verifier->generate_public_key(private_key);
-            auto cpu_address_bytes = verifier->generate_address_bytes(public_key);
-
-            if (cpu_address_bytes != address_bytes) {
-                std::cerr << "WARNING: GPU/CPU address mismatch for seed "
-                          << seed[0] << " " << seed[1] << " " << seed[2] << " " << seed[3] << "\n";
-                continue;
-            }
-        }
-
         // Encode to Base58
         std::string address = Base58::encode_address(address_bytes);
-        std::string private_key_hex = bytes_to_hex(private_key.data(), PRIVATE_KEY_SIZE);
 
-        // Check if it actually matches our patterns
+        // Check the exact Base58 pattern before reconstructing the private key.
+        // Matches are rare, so deferring CPU-side RNG/key formatting avoids per-
+        // candidate work in the hot path.
         if (matcher_.matches_any(address)) {
+            const auto& gpu_result = gpu_results[i];
+
+            std::array<uint32_t, 4> seed = {
+                gpu_result.seed[0],
+                gpu_result.seed[1],
+                gpu_result.seed[2],
+                gpu_result.seed[3]
+            };
+
+            auto seed_bytes = rng.seed_to_bytes(seed);
+            auto private_key = rng.derive_private_key(seed_bytes);
+
+            if (config_.verify_gpu_results) {
+                auto public_key = verifier->generate_public_key(private_key);
+                auto cpu_address_bytes = verifier->generate_address_bytes(public_key);
+
+                if (cpu_address_bytes != address_bytes) {
+                    std::cerr << "WARNING: GPU/CPU address mismatch for seed "
+                              << seed[0] << " " << seed[1] << " " << seed[2] << " " << seed[3] << "\n";
+                    continue;
+                }
+            }
+
+            std::string private_key_hex = bytes_to_hex(private_key.data(), PRIVATE_KEY_SIZE);
             auto patterns = matcher_.get_matching_patterns(address);
             MatchResult result;
             result.address = address;

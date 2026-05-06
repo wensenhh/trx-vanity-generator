@@ -44,7 +44,7 @@ void print_usage(const char* prog) {
               << "  --gpu                 Use GPU acceleration (OpenCL)\n"
               << "  --batch-size <n>      GPU addresses per batch (default: 65536)\n"
               << "  --batches <n>         GPU batch count, then stop (default: 0=infinite)\n"
-              << "  --gpu-verify          Recompute GPU addresses on CPU for debugging\n"
+              << "  --gpu-verify          Recompute matched GPU addresses on CPU for debugging\n"
               << "  -t, --threads <n>     Number of CPU threads (default: auto)\n"
               << "  -o, --output <file>   Output file for matches\n"
               << "  -v, --verbose         Show progress every second\n"
