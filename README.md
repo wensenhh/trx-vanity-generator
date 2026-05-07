@@ -1,94 +1,263 @@
-# TRON (TRX) Vanity Address Generator - GPU Accelerated
+# TRX Vanity Generator｜本地离线 TRON/TRX 靓号地址生成器
 
-High-performance TRX vanity address generator using OpenCL GPU acceleration.
-Supports Windows (NVIDIA/AMD) and macOS (Apple Silicon).
+一句话：在你自己的电脑上离线生成符合指定规则的 TRON/TRX 地址，例如 7 连尾、8 连尾、自定义尾号或包含特定字符的地址。
 
-## Features
+> ⚠️ **安全第一：私钥就是资产控制权。** 谁拿到私钥，谁就能转走这个地址里的 TRX、USDT-TRC20 和其他 TRC20 资产。本项目默认隐藏私钥；不要把私钥发送到 Telegram、微信、GitHub、网盘、截图相册或任何不可信网站。
 
-- GPU-accelerated address generation via OpenCL
-- Multiple vanity patterns: consecutive, sequential, custom suffix/prefix
-- Real-time match output with private keys hidden by default
-- Cross-platform: Windows, macOS, Linux
-- Modular architecture for easy extension
+## 当前可用状态
 
-## Performance Targets
+- **开发者 CLI：可用（alpha）**。适合能安装编译工具、会使用命令行的用户。
+- **普通用户 GUI / Windows Installer / macOS DMG：尚未正式发布**。这些属于产品路线图，不应把当前源码版误认为“一键安装版”。
+- **生成方式：本地运行、可离线使用**。程序不需要把私钥上传到服务器；你仍需确认运行环境可信、结果文件妥善保存。
 
-- CPU: ≥ 50,000 addresses/sec
-- GPU: ≥ 1,000,000 addresses/sec (theoretical)
+## 适合谁 / 不适合谁
 
-## Documentation
+**适合：**
 
-- [中文小白使用文档](docs/USER_GUIDE_zh.md) — macOS / Windows / Linux 编译运行、CPU/GPU 模式、常见问题、安全提醒。
+- 想要生成 TRON/TRX 靓号地址，并愿意在本机保管私钥的人。
+- 开发者、技术用户、能接受命令行 alpha 版本的人。
+- 需要 CPU/GPU 两种路径做验证或性能测试的人。
 
-## Build
+**暂不适合：**
+
+- 只想双击安装、不想接触命令行的普通用户（请等待 GUI / installer）。
+- 不能理解“私钥泄露 = 资产可能被盗”的用户。
+- 需要保证某个时间内必定命中特定地址的人：靓号搜索是概率事件，预计时间不是保证。
+
+## 下载 / 安装入口
+
+当前还没有正式 GUI 安装包。请根据你的身份选择：
+
+- **普通用户：**建议等待 GUI 和正式 Release。路线图见 [#4 GUI](https://github.com/wensenhh/trx-vanity-generator/issues/4)、[#5 Windows](https://github.com/wensenhh/trx-vanity-generator/issues/5)、[#6 macOS](https://github.com/wensenhh/trx-vanity-generator/issues/6)、[#11 Release](https://github.com/wensenhh/trx-vanity-generator/issues/11)。
+- **开发者 / 技术用户：**从源码构建 CLI，见下方 Windows / macOS / Linux 步骤。
+- **官网与截图素材：**当前仅提供占位说明，不能使用真实私钥或真实结果 CSV。见 [docs/WEBSITE_COPY_zh.md](docs/WEBSITE_COPY_zh.md) 和 [docs/assets/README.md](docs/assets/README.md)。
+
+## 3 分钟快速理解
+
+1. 选择规则：例如 `consecutive 8 7` 表示找结尾 7 个 8。
+2. 先用 CPU 小规则测试：确认程序能跑。
+3. 再按需启用 GPU：`--gpu --batch-size 65536`。
+4. 命中后先只保存地址；如必须导出私钥，离线、加密、最小化暴露。
+5. 规则越长越难：7 连尾、8 连尾可能需要很久，预计时间只是概率估算。
+
+## 快速使用（CLI alpha）
+
+> 以下命令假设你已经完成后文构建，并在 `build` 目录中运行。Windows 请把 `./trx_vanity` 替换为 `.\build\Release\trx_vanity.exe` 或你的实际路径。
 
 ```bash
-mkdir build && cd build
-cmake ..
-cmake --build . --parallel
+# 先做一个 CPU smoke test：确认程序能启动和退出
+./trx_vanity prefix T --max-attempts 64 -t 1
+
+# 找结尾 7 个 8
+./trx_vanity consecutive 8 7 -t 8 -v
+
+# 找结尾 8 个 8（更难，耗时显著增加）
+./trx_vanity consecutive 8 8 -t 8 -v
+
+# 自定义尾号，例如 5201314
+./trx_vanity suffix 5201314 -t 8 -v
+
+# GPU 模式：先小批量测试，再正式搜索
+./trx_vanity prefix T --gpu --batch-size 64 --batches 1
+./trx_vanity consecutive 8 7 --gpu --batch-size 65536 -v
+
+# 保存命中结果到文件；默认不会写入私钥
+./trx_vanity suffix 8888 -o results.csv
 ```
 
-### Install / package layout
+## 命中后如何安全保存私钥
+
+默认行为：
+
+- 终端输出会隐藏私钥。
+- `-o/--output` 结果文件默认不包含私钥。
+
+高风险显式选项：
+
+```bash
+# 高风险：把私钥打印到终端
+./trx_vanity suffix 8888 --show-private-key
+
+# 高风险：允许把私钥写入明文输出文件
+./trx_vanity suffix 8888 -o private-results.csv --allow-plaintext-private-key-output
+```
+
+使用这些选项前请确认：
+
+- 当前电脑可信，屏幕录制、终端日志、剪贴板同步都已关闭或可控。
+- 不把结果文件提交到 Git，不发到聊天软件，不上传网盘。
+- 优先使用离线环境和加密存储；高价值资产建议使用专用离线机器。
+- 先用小额资产测试地址可控性，再考虑正式使用。
+
+## Windows 构建路径（当前为源码 CLI）
+
+正式 installer 还没有发布；当前 Windows 用户需要自行编译。
+
+1. 安装 Visual Studio 2022 Community，并勾选 `Desktop development with C++`。
+2. 安装 CMake，或使用 Visual Studio 自带 CMake。
+3. 使用 vcpkg 安装 OpenSSL：
+
+```powershell
+git clone https://github.com/microsoft/vcpkg C:\vcpkg
+C:\vcpkg\bootstrap-vcpkg.bat
+C:\vcpkg\vcpkg install openssl:x64-windows
+```
+
+4. 配置并编译：
+
+```powershell
+cd C:\path\to\trx_addr
+cmake -S . -B build -A x64 -DBUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
+cmake --build build --config Release --parallel
+ctest --test-dir build -C Release --output-on-failure
+```
+
+5. 运行：
+
+```powershell
+.\build\Release\trx_vanity.exe prefix T --max-attempts 64 -t 1
+.\build\Release\trx_vanity.exe consecutive 8 7 -t 8 -v
+.\build\Release\trx_vanity.exe consecutive 8 7 --gpu --batch-size 65536 -v
+```
+
+GPU 模式需要可用的 OpenCL 驱动：NVIDIA / AMD / Intel 显卡请安装对应最新版驱动。
+
+## macOS 构建路径（当前为源码 CLI）
+
+正式 DMG 还没有发布；当前 macOS 用户需要自行编译。
+
+```bash
+xcode-select --install
+brew install cmake openssl
+
+git clone https://github.com/wensenhh/trx-vanity-generator.git
+cd trx-vanity-generator
+mkdir -p build
+cd build
+cmake .. -DBUILD_TESTS=ON
+cmake --build . --parallel
+ctest --output-on-failure
+
+./trx_vanity prefix T --max-attempts 64 -t 1
+./trx_vanity consecutive 8 7 -t 8 -v
+./trx_vanity consecutive 8 7 --gpu --batch-size 65536 -v
+```
+
+macOS 通常自带 OpenCL Framework；如果 CMake 找不到 OpenSSL，可参考 [中文用户指南](docs/USER_GUIDE_zh.md)。
+
+## Linux 构建路径（当前为源码 CLI）
+
+Ubuntu / Debian 示例：
+
+```bash
+sudo apt update
+sudo apt install -y build-essential cmake libssl-dev ocl-icd-opencl-dev opencl-headers
+
+git clone https://github.com/wensenhh/trx-vanity-generator.git
+cd trx-vanity-generator
+cmake -S . -B build -DBUILD_TESTS=ON
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+
+./build/trx_vanity prefix T --max-attempts 64 -t 1
+./build/trx_vanity consecutive 8 7 -t 8 -v
+./build/trx_vanity consecutive 8 7 --gpu --batch-size 65536 -v
+```
+
+NVIDIA / AMD / Intel GPU 用户需要安装对应驱动和 OpenCL runtime。
+
+## 速度和概率：越长越难，预计时间不是保证
+
+TRON 地址使用 Base58 字符集。简单理解：每多指定 1 位尾号，平均搜索难度大约乘以 58。
+
+- 3 位后缀：相对容易。
+- 4 位后缀：普通测试可尝试。
+- 7 连尾：可能需要较长时间和较多算力。
+- 8 连尾：明显更难，可能长时间无结果。
+
+`-v` 可以查看 Attempts 和 Rate。如果 Attempts 持续增长，通常说明程序还在正常搜索，不代表卡住。
+
+性能受 CPU/GPU 型号、驱动、OpenCL 实现、batch size、散热、系统负载影响。任何 README 中的速度或预计时间都只能作为特定环境样例，不能保证你的机器一定达到，也不能保证指定时间内一定命中。
+
+## 常见规则
+
+```bash
+# 后缀匹配
+./trx_vanity suffix 8888
+./trx_vanity suffix 5201314
+
+# 7 连尾 / 8 连尾
+./trx_vanity consecutive 8 7
+./trx_vanity consecutive 8 8
+
+# 顺子尾号
+./trx_vanity sequential 1 7
+
+# 包含指定字符
+./trx_vanity contains 520
+
+# 前缀匹配：TRON 地址固定以 T 开头，这里的 prefix 指 T 后面的内容
+./trx_vanity prefix ABC
+```
+
+## FAQ
+
+**Q：这个项目会把私钥上传到服务器吗？**
+A：不会。当前 CLI 在本机生成地址。你仍需自己保证运行环境可信，不要运行来路不明的二进制文件。
+
+**Q：为什么 README 说普通用户不要急着用？**
+A：当前是开发者 alpha，缺少 GUI、安装器、加密导出和更完整的新手保护。普通用户更适合等待正式 Release。
+
+**Q：我能把 `results.csv` 发给别人确认吗？**
+A：不建议。默认结果不含私钥，但你仍可能误用高风险选项导出私钥。需要协助时请只发脱敏日志，不发私钥、不发完整结果文件。
+
+**Q：可以保证多久找到 8 连尾吗？**
+A：不能。靓号是概率搜索，只能根据速度估算期望时间，不能保证必定在某个时间内命中。
+
+**Q：GPU 一定比 CPU 快吗？**
+A：不保证。GPU 速度取决于设备、驱动、OpenCL、batch size 和当前实现。先跑小批量测试，再决定是否长期使用 GPU。
+
+**Q：如何停止搜索？**
+A：终端按 `Ctrl + C`。
+
+## 文档与路线图
+
+- [中文用户指南](docs/USER_GUIDE_zh.md)：更完整的安装、使用、排错和安全说明。
+- [官网首屏/落地页文案草案](docs/WEBSITE_COPY_zh.md)：产品页面结构、截图清单、安全文案。
+- [安全说明](docs/SECURITY_zh.md)：私钥、结果文件、分享和发布前检查。
+- [#4 GUI](https://github.com/wensenhh/trx-vanity-generator/issues/4)
+- [#5 Windows 安装包](https://github.com/wensenhh/trx-vanity-generator/issues/5)
+- [#6 macOS DMG](https://github.com/wensenhh/trx-vanity-generator/issues/6)
+- [#7 概率/预计时间](https://github.com/wensenhh/trx-vanity-generator/issues/7)
+- [#8 加密导出](https://github.com/wensenhh/trx-vanity-generator/issues/8)
+- [#11 Release](https://github.com/wensenhh/trx-vanity-generator/issues/11)
+
+## 开发者安装 / 包布局
 
 ```bash
 cmake --install build --prefix /opt/trx_vanity
 ```
 
-The install tree contains:
+安装树包含：
 
 ```text
 /opt/trx_vanity/bin/trx_vanity
 /opt/trx_vanity/share/trx_vanity/kernel/*.cl
 ```
 
-When running an installed GPU binary, point `TRX_KERNEL_DIR` at the installed
-kernel directory unless your deployment keeps a source/build-tree kernel layout:
+运行安装版 GPU binary 时，如部署环境不保留源码或 build-tree kernel 布局，请设置：
 
 ```bash
 TRX_KERNEL_DIR=/opt/trx_vanity/share/trx_vanity/kernel \
   /opt/trx_vanity/bin/trx_vanity suffix 8888 --gpu --batch-size 65536
 ```
 
-TGZ packages can be produced from a configured build with:
+TGZ 包可由已配置的 build 目录生成：
 
 ```bash
 cpack --config build/CPackConfig.cmake -G TGZ
 ```
 
-## Usage
-
-```bash
-# CPU mode
-./trx_vanity suffix 8888888 -t 8
-./trx_vanity sequential 1 7 -v
-./trx_vanity contains 520 -o results.csv
-./trx_vanity suffix 8888888 --show-private-key   # unsafe: prints private key with warning
-
-# GPU mode (OpenCL)
-./trx_vanity suffix 8888888 --gpu --batch-size 65536
-./trx_vanity prefix T --gpu --batches 1        # finite smoke run
-./trx_vanity prefix T --gpu --gpu-verify       # debug CPU/GPU address checks
-./trx_vanity prefix ZZZ --gpu --auto-tune --batches 10 --profile --benchmark-json
-```
-
-GPU batch auto-tune benchmarks candidate batch sizes on the selected device and
-uses the fastest result for the actual run. Override candidates with
-`--auto-tune-sizes 65536,131072,262144` and per-candidate sample count with
-`--auto-tune-batches <n>`.
-
-`TRX_KERNEL_DIR=/path/to/kernel` can be set when running the GPU binary outside
-the source/build tree so `vanity.cl` can be located. For installed packages,
-use `<prefix>/share/trx_vanity/kernel`.
-
-For CI/smoke tests, CPU mode supports `--max-attempts <n>` to stop after a
-bounded number of generated addresses.
-
-Security defaults: matched private keys are hidden from stdout and omitted from
-`-o/--output` CSV files unless explicitly requested. Use `--show-private-key` to
-print a private key and `--allow-plaintext-private-key-output` to include private
-keys in plaintext output files; both modes print warnings because leaked private
-keys can spend funds sent to the matched address.
-
 ## Architecture
 
-See ARCHITECTURE.md for detailed design.
+See `ARCHITECTURE.md` for detailed design.
