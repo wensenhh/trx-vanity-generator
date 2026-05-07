@@ -215,6 +215,12 @@ size_t GPUGenerator::auto_tune_batch_size() {
 void GPUGenerator::initialize() {
     cl_ = std::make_unique<OpenCLManager>();
     cl_->initialize();
+    if (config_.platform_idx >= 0 || config_.device_idx >= 0) {
+        if (config_.platform_idx < 0 || config_.device_idx < 0) {
+            throw std::invalid_argument("Both platform and device indexes are required when selecting an OpenCL device");
+        }
+        cl_->select_device(config_.platform_idx, config_.device_idx);
+    }
 
     auto device = cl_->get_selected_device();
     std::cout << "GPU Device: " << device.name << "\n";

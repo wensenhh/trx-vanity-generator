@@ -165,6 +165,14 @@ if(BUILD_TESTS)
         COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cli_private_key_output.cmake)
     set_tests_properties(cli_private_key_output_security PROPERTIES TIMEOUT 20)
 
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_argument_validation.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/cli_argument_validation.cmake
+        @ONLY)
+    add_test(NAME cli_argument_validation
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cli_argument_validation.cmake)
+    set_tests_properties(cli_argument_validation PROPERTIES TIMEOUT 10)
+
     if(TARGET test_ecc)
         add_test(NAME cli_gpu_smoke
             COMMAND trx_vanity contains T --gpu --batch-size 64 --batches 1)
