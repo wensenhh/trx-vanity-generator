@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <sstream>
 #include <vector>
+#include <atomic>
 
 using namespace trx;
 
@@ -65,6 +66,9 @@ void print_usage(const char* prog) {
               << "  --profile             Print GPU per-batch timing breakdown\n"
               << "  --benchmark-json      Print final benchmark metrics as JSON\n"
               << "  --max-attempts <n>    Stop after approximately n attempts (CPU smoke/CI)\n"
+              << "  --show-private-key    Explicitly print matched private keys to stdout (unsafe)\n"
+              << "  --allow-plaintext-private-key-output\n"
+              << "                         Explicitly allow private keys in plaintext output files (unsafe)\n"
               << "  -t, --threads <n>     Number of CPU threads (default: auto)\n"
               << "  -o, --output <file>   Output file for matches\n"
               << "  -v, --verbose         Show progress every second\n"
@@ -91,6 +95,8 @@ int main(int argc, char* argv[]) {
     int num_threads = static_cast<int>(std::thread::hardware_concurrency());
     std::string output_file;
     bool verbose = false;
+    bool show_private_key = false;
+    bool allow_plaintext_private_key_output = false;
 
     // Add GPU mode CLI flag
     bool use_gpu = false;
@@ -123,6 +129,10 @@ int main(int argc, char* argv[]) {
             gpu_profile = true;
         } else if (arg == "--benchmark-json") {
             benchmark_json = true;
+        } else if (arg == "--show-private-key") {
+            show_private_key = true;
+        } else if (arg == "--allow-plaintext-private-key-output") {
+            allow_plaintext_private_key_output = true;
         } else if (arg == "--auto-tune") {
             use_gpu = true;
             gpu_auto_tune = true;
@@ -173,6 +183,17 @@ int main(int argc, char* argv[]) {
         std::cout << "Threads: " << num_threads << "\n";
     }
     std::cout << "Output:  " << (output_file.empty() ? "stdout" : output_file) << "\n\n";
+    if (show_private_key) {
+        std::cerr << "WARNING: --show-private-key will print private keys to stdout. "
+                  << "Anyone with this output can spend funds sent to the matched address.\n";
+    }
+    if (allow_plaintext_private_key_output) {
+        std::cerr << "WARNING: --allow-plaintext-private-key-output will write private keys "
+                  << "to a plaintext file. Protect or delete the file immediately.\n";
+    } else if (!output_file.empty()) {
+        std::cout << "Security: private keys are NOT written to the output file by default. "
+                  << "Use --allow-plaintext-private-key-output only if you accept the risk.\n\n";
+    }
 
     GPUGenerationConfig gpu_config;
     if (pattern_type == "consecutive") {
@@ -242,13 +263,24 @@ int main(int argc, char* argv[]) {
         std::cout << "║  🎯 MATCH FOUND!                                             ║\n";
         std::cout << "╠══════════════════════════════════════════════════════════════╣\n";
         std::cout << "║  Address:    " << std::left << std::setw(46) << result.address << "║\n";
-        std::cout << "║  Private Key: " << std::setw(46) << result.private_key_hex << "║\n";
+        std::cout << "║  Rule:       " << std::setw(46) << result.pattern_matched << "║\n";
         std::cout << "║  Attempts:   " << std::setw(46) << result.attempts << "║\n";
+        if (show_private_key) {
+            std::cout << "║  WARNING: private key shown; keep it secret.          ║\n";
+            std::cout << "║  Private Key: " << std::setw(46) << result.private_key_hex << "║\n";
+        } else {
+            std::cout << "║  Security: private key hidden by default.             ║\n";
+        }
         std::cout << "╚══════════════════════════════════════════════════════════════╝\n";
 
         if (out_file.is_open()) {
-            out_file << result.address << "," << result.private_key_hex << ","
-                     << result.pattern_matched << "," << result.attempts << "\n";
+            if (allow_plaintext_private_key_output) {
+                out_file << result.address << "," << result.private_key_hex << ","
+                         << result.pattern_matched << "," << result.attempts << "\n";
+            } else {
+                out_file << result.address << "," << result.pattern_matched << ","
+                         << result.attempts << ",private_key_hidden\n";
+            }
             out_file.flush();
         }
     };

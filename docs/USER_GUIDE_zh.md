@@ -25,12 +25,14 @@ TABC......
 T......1234567
 ```
 
-找到以后，程序会输出：
+找到以后，程序默认会输出：
 
 - 地址：`Address`
-- 私钥：`Private Key`
-- 命中的规则：`Pattern`
+- 命中的规则：`Rule` / `Pattern`
 - 尝试次数：`Attempts`
+- 安全提示：私钥默认隐藏
+
+只有你显式传入 `--show-private-key` 时，程序才会把私钥打印到终端；只有你显式传入 `--allow-plaintext-private-key-output` 时，程序才会把私钥写入明文结果文件。
 
 ⚠️ **非常重要：私钥就是资产控制权。**
 
@@ -342,10 +344,10 @@ CPU 模式用几个线程。
 文件内容大概是：
 
 ```text
-地址,私钥,命中规则,尝试次数
+地址,命中规则,尝试次数
 ```
 
-⚠️ 这个文件里有私钥，请妥善保管。
+默认不会把私钥写入输出文件；如确需导出私钥，必须显式使用允许明文私钥输出的选项，并妥善保管结果文件。
 
 ---
 
@@ -869,17 +871,17 @@ Base58 字符集大约有 58 个字符。
 ```text
 MATCH FOUND!
 Address:     Txxxxxxxxxxxxxxxxxxxxxxxxxxxxx8888
-Private Key: abcdef123456...
+Security:    Private key hidden by default
 Attempts:    12345678
 ```
 
 你需要保存：
 
 ```text
-Address + Private Key
+Address
 ```
 
-尤其是 Private Key。
+私钥默认不会显示；只有在你明确启用显示私钥的选项时才会输出。若显示或导出私钥，请立即离线妥善保存，绝不要公开。
 
 如果你用了：
 

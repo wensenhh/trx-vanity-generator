@@ -157,6 +157,14 @@ if(BUILD_TESTS)
         COMMAND trx_vanity sequential 1 4 --max-attempts 64 -t 1)
     set_tests_properties(cli_cpu_sequential_smoke PROPERTIES TIMEOUT 10)
 
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_private_key_output.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/cli_private_key_output.cmake
+        @ONLY)
+    add_test(NAME cli_private_key_output_security
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cli_private_key_output.cmake)
+    set_tests_properties(cli_private_key_output_security PROPERTIES TIMEOUT 20)
+
     if(TARGET test_ecc)
         add_test(NAME cli_gpu_smoke
             COMMAND trx_vanity contains T --gpu --batch-size 64 --batches 1)
