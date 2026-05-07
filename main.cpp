@@ -14,6 +14,8 @@
 #include <sstream>
 #include <vector>
 #include <atomic>
+#include <cctype>
+#include <limits>
 
 using namespace trx;
 
@@ -46,53 +48,121 @@ void print_banner() {
 )" << '\n';
 }
 
-void print_usage(const char* prog) {
-    std::cout << "Usage:\n"
-              << "  " << prog << " <pattern_type> <pattern> [options]\n\n"
-              << "Pattern Types:\n"
-              << "  consecutive <digit> <length>  - e.g., consecutive 8 7  (8888888)\n"
-              << "  sequential <start> <length>   - e.g., sequential 1 7   (1234567)\n"
-              << "  suffix <string>               - e.g., suffix 8888\n"
-              << "  prefix <string>               - e.g., prefix ABC\n"
-              << "  contains <string>             - e.g., contains 520\n\n"
-              << "Options:\n"
-              << "  --gpu                 Use GPU acceleration (OpenCL)\n"
-              << "  --batch-size <n>      GPU addresses per batch (default: 65536)\n"
-              << "  --auto-tune           Benchmark candidate GPU batch sizes and use the fastest\n"
-              << "  --auto-tune-sizes <csv> Candidate batch sizes (default: 32768,65536,131072,262144,524288)\n"
-              << "  --auto-tune-batches <n> Batches per auto-tune candidate (default: 3)\n"
-              << "  --batches <n>         GPU batch count, then stop (default: 0=infinite)\n"
-              << "  --gpu-verify          Recompute matched GPU addresses on CPU for debugging\n"
-              << "  --profile             Print GPU per-batch timing breakdown\n"
-              << "  --benchmark-json      Print final benchmark metrics as JSON\n"
-              << "  --max-attempts <n>    Stop after approximately n attempts (CPU smoke/CI)\n"
-              << "  --show-private-key    Explicitly print matched private keys to stdout (unsafe)\n"
-              << "  --allow-plaintext-private-key-output\n"
-              << "                         Explicitly allow private keys in plaintext output files (unsafe)\n"
-              << "  -t, --threads <n>     Number of CPU threads (default: auto)\n"
-              << "  -o, --output <file>   Output file for matches\n"
-              << "  -v, --verbose         Show progress every second\n"
-              << "  -h, --help            Show this help\n\n"
-              << "Examples:\n"
-              << "  " << prog << " consecutive 8 7\n"
-              << "  " << prog << " suffix 5201314 -t 8 -o results.txt\n"
-              << "  " << prog << " sequential 1 7 -v\n"
-              << "  " << prog << " consecutive 8 7 --gpu\n";
+void print_usage(const char* prog, std::ostream& os = std::cout) {
+    os << "Usage:\n"
+       << "  trx_vanity <pattern-type> <pattern> [options]\n"
+       << "  " << prog << " <pattern-type> <pattern> [options]\n\n"
+       << "Pattern types: prefix, suffix, contains, consecutive, sequential\n"
+       << "  prefix <string>              Match after TRON's leading T, e.g. prefix ABC\n"
+       << "  suffix <string>              Match address tail, e.g. suffix 8888\n"
+       << "  contains <string>            Match anywhere, e.g. contains 520\n"
+       << "  consecutive <char> [length]  Repeated suffix, e.g. consecutive 8 7 -> 8888888\n"
+       << "  sequential <start> [length]  Ascending suffix, e.g. sequential 1 7 -> 1234567\n\n"
+       << "Options:\n"
+       << "  --gpu                 Use GPU acceleration (OpenCL)\n"
+       << "  --batch-size, --gpu-batch <n> GPU addresses per batch (default: 65536)\n"
+       << "  --device <platform:device> Select OpenCL platform/device indexes (default: auto)\n"
+       << "  --auto-tune           Benchmark candidate GPU batch sizes and use the fastest\n"
+       << "  --auto-tune-sizes <csv> Candidate batch sizes (default: 32768,65536,131072,262144,524288)\n"
+       << "  --auto-tune-batches <n> Batches per auto-tune candidate (default: 3)\n"
+       << "  --batches <n>         GPU batch count, then stop (default: 0=infinite)\n"
+       << "  --gpu-verify          Recompute matched GPU addresses on CPU for debugging\n"
+       << "  --profile             Print GPU per-batch timing breakdown\n"
+       << "  --benchmark-json      Print final benchmark metrics as JSON\n"
+       << "  --max-attempts <n>    Stop after approximately n attempts (CPU smoke/CI)\n"
+       << "  --show-private-key    Print matched private keys to stdout (unsafe; exposes funds)\n"
+       << "  --allow-plaintext-private-key-output\n"
+       << "                         Allow private keys in plaintext output files (unsafe)\n"
+       << "  -t, --threads <n>     Number of CPU threads (default: auto)\n"
+       << "  -o, --output <file>   Output file for matches; private keys are NOT written by default\n"
+       << "  -v, --verbose         Show progress every second\n"
+       << "  -h, --help            Show this help\n\n"
+       << "Examples:\n"
+       << "  " << prog << " consecutive 8 7                 # 7 repeated 8s at the end\n"
+       << "  " << prog << " consecutive 8 8                 # 8 repeated 8s at the end\n"
+       << "  " << prog << " suffix 5201314 -t 8 -o results.txt\n"
+       << "  " << prog << " suffix 8888 --max-attempts 100000 -t 4\n"
+       << "  " << prog << " consecutive 8 7 --gpu --batch-size 65536\n";
+}
+
+bool is_supported_pattern_type(const std::string& type) {
+    return type == "prefix" || type == "suffix" || type == "contains" ||
+           type == "consecutive" || type == "sequential";
+}
+
+bool looks_like_option(const char* value) {
+    return value && value[0] == '-';
+}
+
+bool is_valid_base58_string(const std::string& value) {
+    return !value.empty() && std::all_of(value.begin(), value.end(), [](char c) {
+        return std::string(BASE58_ALPHABET).find(c) != std::string::npos;
+    });
+}
+
+int fail(const char* prog, const std::string& message, const std::string& hint = "", bool show_usage = false) {
+    std::cerr << "Error: " << message << "\n";
+    if (!hint.empty()) {
+        std::cerr << "Hint: " << hint << "\n";
+    }
+    if (show_usage) {
+        std::cerr << "\n";
+        print_usage(prog, std::cerr);
+    }
+    return 2;
+}
+
+bool parse_positive_size(const std::string& text, size_t& out) {
+    try {
+        size_t pos = 0;
+        unsigned long long value = std::stoull(text, &pos, 10);
+        if (pos != text.size() || value == 0 || value > std::numeric_limits<size_t>::max()) return false;
+        out = static_cast<size_t>(value);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+bool parse_nonnegative_u64(const std::string& text, uint64_t& out) {
+    try {
+        size_t pos = 0;
+        unsigned long long value = std::stoull(text, &pos, 10);
+        if (pos != text.size()) return false;
+        out = static_cast<uint64_t>(value);
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 int main(int argc, char* argv[]) {
     print_banner();
 
-    if (argc < 3) {
+    if (argc == 2 && (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
         print_usage(argv[0]);
-        return 1;
+        return 0;
+    }
+    if (argc < 2) {
+        return fail(argv[0], "missing <pattern-type>.",
+                    "Run 'trx_vanity --help' for examples and supported pattern types.", true);
+    }
+    if (argc < 3 || looks_like_option(argv[2])) {
+        return fail(argv[0], "missing <pattern> for pattern type '" + std::string(argv[1]) + "'.",
+                    "Command format: trx_vanity <pattern-type> <pattern> [options].", true);
     }
 
     // Parse arguments
     std::string pattern_type = argv[1];
     std::string pattern_arg = argv[2];
     std::string pattern_arg2;
+    if (!is_supported_pattern_type(pattern_type)) {
+        return fail(argv[0], "unknown pattern type '" + pattern_type + "'.",
+                    "Supported pattern types: prefix, suffix, contains, consecutive, sequential.");
+    }
+
     int num_threads = static_cast<int>(std::thread::hardware_concurrency());
+    if (num_threads <= 0) num_threads = 1;
     std::string output_file;
     bool verbose = false;
     bool show_private_key = false;
@@ -109,12 +179,28 @@ int main(int argc, char* argv[]) {
     size_t gpu_batch_size = DEFAULT_BATCH_SIZE;
     size_t gpu_num_batches = 0;
     uint64_t max_attempts = 0;
+    int gpu_platform_idx = -1;
+    int gpu_device_idx = -1;
+
+    auto require_value = [&](int index, const std::string& opt) -> bool {
+        if (index + 1 >= argc || looks_like_option(argv[index + 1])) {
+            fail(argv[0], opt + " requires a value.", "Run 'trx_vanity --help' to see option syntax.");
+            return false;
+        }
+        return true;
+    };
 
     for (int i = 3; i < argc; ++i) {
         std::string arg = argv[i];
-        if ((arg == "-t" || arg == "--threads") && i + 1 < argc) {
-            num_threads = std::stoi(argv[++i]);
-        } else if ((arg == "-o" || arg == "--output") && i + 1 < argc) {
+        if ((arg == "-t" || arg == "--threads")) {
+            if (!require_value(i, arg)) return 2;
+            size_t parsed = 0;
+            if (!parse_positive_size(argv[++i], parsed) || parsed > static_cast<size_t>(std::numeric_limits<int>::max())) {
+                return fail(argv[0], arg + " must be a positive integer.", "Example: --threads 4");
+            }
+            num_threads = static_cast<int>(parsed);
+        } else if ((arg == "-o" || arg == "--output")) {
+            if (!require_value(i, arg)) return 2;
             output_file = argv[++i];
         } else if (arg == "-v" || arg == "--verbose") {
             verbose = true;
@@ -136,20 +222,102 @@ int main(int argc, char* argv[]) {
         } else if (arg == "--auto-tune") {
             use_gpu = true;
             gpu_auto_tune = true;
-        } else if (arg == "--auto-tune-batches" && i + 1 < argc) {
-            gpu_auto_tune_batches = std::stoull(argv[++i]);
-        } else if (arg == "--auto-tune-sizes" && i + 1 < argc) {
-            gpu_auto_tune_candidates = parse_size_list(argv[++i]);
-        } else if (arg == "--batch-size" && i + 1 < argc) {
-            gpu_batch_size = std::stoull(argv[++i]);
-        } else if (arg == "--batches" && i + 1 < argc) {
-            gpu_num_batches = std::stoull(argv[++i]);
-        } else if (arg == "--max-attempts" && i + 1 < argc) {
-            max_attempts = std::stoull(argv[++i]);
+        } else if (arg == "--auto-tune-batches") {
+            if (!require_value(i, arg)) return 2;
+            if (!parse_positive_size(argv[++i], gpu_auto_tune_batches)) {
+                return fail(argv[0], arg + " must be a positive integer.", "Example: --auto-tune-batches 3");
+            }
+        } else if (arg == "--auto-tune-sizes") {
+            if (!require_value(i, arg)) return 2;
+            try {
+                gpu_auto_tune_candidates = parse_size_list(argv[++i]);
+            } catch (...) {
+                return fail(argv[0], arg + " must be a comma-separated list of positive integers.", "Example: --auto-tune-sizes 32768,65536");
+            }
+            if (gpu_auto_tune_candidates.empty() || std::any_of(gpu_auto_tune_candidates.begin(), gpu_auto_tune_candidates.end(), [](size_t n) { return n == 0; })) {
+                return fail(argv[0], arg + " must include at least one positive integer.", "Example: --auto-tune-sizes 32768,65536");
+            }
+        } else if (arg == "--batch-size" || arg == "--gpu-batch") {
+            if (!require_value(i, arg)) return 2;
+            if (!parse_positive_size(argv[++i], gpu_batch_size)) {
+                return fail(argv[0], arg + " must be a positive integer.", "Example: --batch-size 65536");
+            }
+        } else if (arg == "--batches") {
+            if (!require_value(i, arg)) return 2;
+            if (!parse_positive_size(argv[++i], gpu_num_batches)) {
+                return fail(argv[0], arg + " must be a positive integer.", "Use 0 by omitting --batches for infinite GPU generation.");
+            }
+        } else if (arg == "--max-attempts") {
+            if (!require_value(i, arg)) return 2;
+            if (!parse_nonnegative_u64(argv[++i], max_attempts)) {
+                return fail(argv[0], arg + " must be a non-negative integer.", "Example: --max-attempts 1000000");
+            }
+        } else if (arg == "--device") {
+            if (!require_value(i, arg)) return 2;
+            std::string spec = argv[++i];
+            size_t colon = spec.find(':');
+            size_t platform = 0;
+            size_t device = 0;
+            if (colon == std::string::npos || !parse_positive_size(spec.substr(0, colon), platform) || !parse_positive_size(spec.substr(colon + 1), device)) {
+                return fail(argv[0], arg + " must use <platform:device> with positive integer indexes.", "Example: --device 1:1");
+            }
+            gpu_platform_idx = static_cast<int>(platform - 1);
+            gpu_device_idx = static_cast<int>(device - 1);
         } else if (i == 3 && (pattern_type == "consecutive" || pattern_type == "sequential")) {
             pattern_arg2 = arg;
+        } else {
+            return fail(argv[0], "unknown option or unexpected argument '" + arg + "'.",
+                        "Run 'trx_vanity --help' to see supported options.");
         }
     }
+
+    auto validate_pattern = [&]() -> int {
+        if (pattern_arg.empty()) {
+            return fail(argv[0], "pattern must not be empty.", "Provide a Base58 pattern such as suffix 8888.");
+        }
+        if (pattern_type == "prefix" || pattern_type == "suffix" || pattern_type == "contains") {
+            if (!is_valid_base58_string(pattern_arg)) {
+                return fail(argv[0], "pattern contains characters that are not valid Base58.",
+                            "Base58 excludes visually ambiguous characters: 0, O, I, l.");
+            }
+            if (pattern_type == "prefix" && pattern_arg.size() > 10) {
+                return fail(argv[0], "prefix pattern is too long.", "Prefix length must be 1-10 characters.");
+            }
+            if ((pattern_type == "suffix" || pattern_type == "contains") && pattern_arg.size() > 20) {
+                return fail(argv[0], "pattern is too long.", "Suffix/contains length must be 1-20 characters.");
+            }
+        } else if (pattern_type == "consecutive") {
+            if (pattern_arg.size() != 1 || !is_valid_base58_string(pattern_arg) || !std::isdigit(static_cast<unsigned char>(pattern_arg[0]))) {
+                return fail(argv[0], "consecutive pattern must be a single Base58 character currently supported as digit 1-9.", "Example: consecutive 8 7");
+            }
+            size_t length = 0;
+            if (!pattern_arg2.empty() && !parse_positive_size(pattern_arg2, length)) {
+                return fail(argv[0], "consecutive length must be a positive integer.", "Example: consecutive 8 7");
+            }
+            length = pattern_arg2.empty() ? 7 : length;
+            if (length > 20) {
+                return fail(argv[0], "consecutive length is too long.", "Length must be 1-20.");
+            }
+        } else if (pattern_type == "sequential") {
+            if (pattern_arg.size() != 1 || !std::isdigit(static_cast<unsigned char>(pattern_arg[0]))) {
+                return fail(argv[0], "sequential pattern must start with a single digit.", "Example: sequential 1 7");
+            }
+            size_t length = 0;
+            if (!pattern_arg2.empty() && !parse_positive_size(pattern_arg2, length)) {
+                return fail(argv[0], "sequential length must be a positive integer.", "Example: sequential 1 7");
+            }
+            length = pattern_arg2.empty() ? 7 : length;
+            if (length > 10) {
+                return fail(argv[0], "sequential length is too long.", "Length must be 1-10.");
+            }
+            if ((pattern_arg[0] - '0') + static_cast<int>(length) - 1 > 9) {
+                return fail(argv[0], "sequential pattern cannot produce a digit-only ascending suffix with this start and length.",
+                            "Example: sequential 1 7 produces 1234567; sequential 9 4 is invalid.");
+            }
+        }
+        return 0;
+    };
+    if (int validation_result = validate_pattern(); validation_result != 0) return validation_result;
 
     // Create pattern
     std::unique_ptr<Pattern> pattern;
@@ -169,12 +337,12 @@ int main(int argc, char* argv[]) {
         } else if (pattern_type == "contains") {
             pattern = std::make_unique<ContainsPattern>(pattern_arg);
         } else {
-            std::cerr << "Unknown pattern type: " << pattern_type << "\n";
-            return 1;
+            return fail(argv[0], "unknown pattern type '" + pattern_type + "'.",
+                        "Supported pattern types: prefix, suffix, contains, consecutive, sequential.");
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error creating pattern: " << e.what() << "\n";
-        return 1;
+        return fail(argv[0], std::string("could not create pattern: ") + e.what(),
+                    "Run 'trx_vanity --help' to see valid pattern forms.");
     }
 
     std::cout << "Pattern: " << pattern->description() << "\n";
@@ -242,6 +410,8 @@ int main(int argc, char* argv[]) {
         gpu_config.auto_tune_batches = gpu_auto_tune_batches;
         gpu_config.auto_tune_candidates = gpu_auto_tune_candidates;
         gpu_config.verbose = verbose;
+        gpu_config.platform_idx = gpu_platform_idx;
+        gpu_config.device_idx = gpu_device_idx;
         gpu_generator->set_config(gpu_config);
         gpu_generator->initialize();
     } else {

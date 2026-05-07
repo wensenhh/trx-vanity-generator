@@ -1,0 +1,71 @@
+set(TRX_VANITY "@CMAKE_CURRENT_BINARY_DIR@/trx_vanity")
+
+function(run_cli CASE_NAME EXPECT_SUCCESS OUT_VAR)
+    execute_process(
+        COMMAND "${TRX_VANITY}" ${ARGN}
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE stdout
+        ERROR_VARIABLE stderr
+    )
+    set(text "${stdout}\n${stderr}")
+    if(EXPECT_SUCCESS)
+        if(NOT result EQUAL 0)
+            message(FATAL_ERROR "${CASE_NAME}: expected success, got ${result}\n${text}")
+        endif()
+    else()
+        if(result EQUAL 0)
+            message(FATAL_ERROR "${CASE_NAME}: expected non-zero exit\n${text}")
+        endif()
+        if(NOT text MATCHES "Error:")
+            message(FATAL_ERROR "${CASE_NAME}: expected Error: prefix\n${text}")
+        endif()
+        if(text MATCHES "(^|[^0-9A-Fa-f])[0-9A-Fa-f]{64}([^0-9A-Fa-f]|$)")
+            message(FATAL_ERROR "${CASE_NAME}: error output must not contain private-key-like material")
+        endif()
+    endif()
+    set(${OUT_VAR} "${text}" PARENT_SCOPE)
+endfunction()
+
+function(assert_matches CASE_NAME TEXT REGEX)
+    if(NOT TEXT MATCHES "${REGEX}")
+        message(FATAL_ERROR "${CASE_NAME}: expected /${REGEX}/\n${TEXT}")
+    endif()
+endfunction()
+
+run_cli("help" TRUE help_text --help)
+assert_matches("help usage" "${help_text}" "trx_vanity <pattern-type> <pattern> \\[options\\]")
+assert_matches("help pattern types" "${help_text}" "prefix.*suffix.*contains.*consecutive.*sequential")
+assert_matches("help seven repeated suffix" "${help_text}" "consecutive 8 7")
+assert_matches("help eight repeated suffix" "${help_text}" "consecutive 8 8")
+assert_matches("help custom suffix" "${help_text}" "suffix 5201314")
+assert_matches("help gpu example" "${help_text}" "--gpu")
+assert_matches("help private key risk" "${help_text}" "--show-private-key.*unsafe")
+assert_matches("help output default" "${help_text}" "-o.*private keys are NOT written")
+
+run_cli("missing pattern type" FALSE missing_type)
+assert_matches("missing pattern type usage" "${missing_type}" "Usage:")
+assert_matches("missing pattern type hint" "${missing_type}" "Hint:")
+
+run_cli("missing pattern" FALSE missing_pattern suffix)
+assert_matches("missing pattern" "${missing_pattern}" "missing <pattern>")
+
+run_cli("unknown pattern type" FALSE unknown_type notamode 8888)
+assert_matches("unknown pattern type values" "${unknown_type}" "Supported pattern types: prefix, suffix, contains, consecutive, sequential")
+
+run_cli("invalid base58" FALSE invalid_base58 suffix 0OIl)
+assert_matches("invalid base58 hint" "${invalid_base58}" "Base58.*0, O, I, l")
+
+run_cli("invalid consecutive digit" FALSE invalid_consecutive consecutive 88 7)
+assert_matches("invalid consecutive digit message" "${invalid_consecutive}" "consecutive.*single Base58 character")
+
+run_cli("invalid sequential start" FALSE invalid_sequential sequential 9 4)
+assert_matches("invalid sequential start message" "${invalid_sequential}" "sequential.*cannot produce")
+
+run_cli("invalid threads value" FALSE invalid_threads suffix 8888 --max-attempts 1 --threads nope)
+assert_matches("invalid threads value message" "${invalid_threads}" "--threads.*positive integer")
+
+run_cli("missing gpu batch value" FALSE missing_gpu_batch suffix 8888 --gpu-batch)
+assert_matches("missing gpu batch value message" "${missing_gpu_batch}" "--gpu-batch.*requires a value")
+
+run_cli("missing device value" FALSE missing_device suffix 8888 --device)
+assert_matches("missing device value message" "${missing_device}" "--device.*requires a value")
