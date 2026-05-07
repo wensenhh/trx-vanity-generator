@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <sstream>
 #include <vector>
+#include <atomic>
 
 using namespace trx;
 
