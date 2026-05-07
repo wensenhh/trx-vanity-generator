@@ -115,6 +115,11 @@ if(OpenCL_FOUND AND USE_OPENCL)
     target_link_libraries(test_gpu_filter OpenSSL::SSL OpenSSL::Crypto Threads::Threads ${OpenCL_LIBRARIES})
     target_include_directories(test_gpu_filter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
     target_compile_options(test_gpu_filter PRIVATE -Wall -Wextra -O3 -march=native)
+
+    add_executable(test_gpu_full_pipeline tests/test_gpu_full_pipeline.cpp utils/crypto.cpp utils/rng.cpp host/opencl_manager.cpp)
+    target_link_libraries(test_gpu_full_pipeline OpenSSL::SSL OpenSSL::Crypto Threads::Threads ${OpenCL_LIBRARIES})
+    target_include_directories(test_gpu_full_pipeline PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
+    target_compile_options(test_gpu_full_pipeline PRIVATE -Wall -Wextra -O3 -march=native)
 endif()
 
 # Tests
@@ -127,10 +132,30 @@ if(BUILD_TESTS)
     if(TARGET test_gpu_filter)
         add_test(NAME gpu_base58_filter COMMAND test_gpu_filter)
     endif()
+    if(TARGET test_gpu_full_pipeline)
+        add_test(NAME gpu_full_pipeline_deterministic COMMAND test_gpu_full_pipeline)
+        set_tests_properties(gpu_full_pipeline_deterministic PROPERTIES TIMEOUT 20)
+    endif()
 
     add_test(NAME cli_cpu_smoke
         COMMAND trx_vanity contains T --max-attempts 64 -t 1)
     set_tests_properties(cli_cpu_smoke PROPERTIES TIMEOUT 10)
+
+    add_test(NAME cli_cpu_suffix_smoke
+        COMMAND trx_vanity suffix 8888 --max-attempts 64 -t 1)
+    set_tests_properties(cli_cpu_suffix_smoke PROPERTIES TIMEOUT 10)
+
+    add_test(NAME cli_cpu_prefix_smoke
+        COMMAND trx_vanity prefix ABC --max-attempts 64 -t 1)
+    set_tests_properties(cli_cpu_prefix_smoke PROPERTIES TIMEOUT 10)
+
+    add_test(NAME cli_cpu_consecutive_smoke
+        COMMAND trx_vanity consecutive 8 4 --max-attempts 64 -t 1)
+    set_tests_properties(cli_cpu_consecutive_smoke PROPERTIES TIMEOUT 10)
+
+    add_test(NAME cli_cpu_sequential_smoke
+        COMMAND trx_vanity sequential 1 4 --max-attempts 64 -t 1)
+    set_tests_properties(cli_cpu_sequential_smoke PROPERTIES TIMEOUT 10)
 
     if(TARGET test_ecc)
         add_test(NAME cli_gpu_smoke
@@ -144,8 +169,27 @@ if(BUILD_TESTS)
         add_test(NAME cli_gpu_profile_smoke
             COMMAND trx_vanity contains T --gpu --batch-size 64 --batches 1 --profile --benchmark-json)
         set_tests_properties(cli_gpu_profile_smoke PROPERTIES TIMEOUT 30)
+
+        configure_file(
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/install_tree_smoke.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/install_tree_smoke.cmake
+            @ONLY)
+        add_test(NAME install_tree_gpu_runtime_smoke
+            COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/install_tree_smoke.cmake)
+        set_tests_properties(install_tree_gpu_runtime_smoke PROPERTIES TIMEOUT 40)
     endif()
 endif()
 
 # Install
 install(TARGETS trx_vanity DESTINATION bin)
+if(OpenCL_FOUND AND USE_OPENCL)
+    install(DIRECTORY kernel/
+        DESTINATION share/trx_vanity/kernel
+        FILES_MATCHING PATTERN "*.cl")
+endif()
+
+set(CPACK_PACKAGE_NAME "trx_vanity")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "TRON vanity address generator with OpenCL GPU acceleration")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "trx_vanity")
+include(CPack)

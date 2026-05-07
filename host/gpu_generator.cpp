@@ -246,10 +246,9 @@ void GPUGenerator::initialize() {
         config_.batch_size = auto_tune_batch_size();
     }
 
-    // Create buffers. The current full-GPU kernel returns every generated
-    // address for CPU-side Base58 verification (no GPU prefilter yet), so the
-    // result buffers must be able to hold the whole batch. A smaller fixed cap
-    // silently drops candidates and creates false negatives.
+    // Create buffers. Exact GPU-side Base58Check filtering normally returns
+    // only rare matches, but buffers still scale to the full batch as a safety
+    // guard against permissive/debug filters and atomic counter overflow.
     size_t seeds_size = config_.batch_size * sizeof(cl_uint4);
     size_t results_size = config_.batch_size * sizeof(GPUMatchResult);
     size_t addresses_size = config_.batch_size * TRX_ADDRESS_SIZE * sizeof(cl_uchar);
@@ -280,9 +279,14 @@ void GPUGenerator::initialize() {
 }
 
 void GPUGenerator::upload_pattern_data() {
-    // Upload pattern matching parameters to GPU
-    // For now, simplified - full pattern matching done on CPU for candidates
-    // Phase 3 will implement full GPU pattern matching
+    if (!pattern_buffer_ || !cl_) return;
+    const size_t pattern_size = config_.gpu_pattern_chars.size() * sizeof(cl_uchar);
+    cl_->write_buffer(pattern_buffer_, pattern_size, config_.gpu_pattern_chars.data(), true);
+
+    cl_uint pattern_type_arg = static_cast<cl_uint>(config_.gpu_pattern_type);
+    cl_uint pattern_len_arg = static_cast<cl_uint>(config_.gpu_pattern_len);
+    cl_->set_kernel_arg(kernel_, 5, sizeof(cl_uint), &pattern_type_arg);
+    cl_->set_kernel_arg(kernel_, 6, sizeof(cl_uint), &pattern_len_arg);
 }
 
 void GPUGenerator::start() {

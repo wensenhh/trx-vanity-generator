@@ -28,6 +28,33 @@ cmake ..
 cmake --build . --parallel
 ```
 
+### Install / package layout
+
+```bash
+cmake --install build --prefix /opt/trx_vanity
+```
+
+The install tree contains:
+
+```text
+/opt/trx_vanity/bin/trx_vanity
+/opt/trx_vanity/share/trx_vanity/kernel/*.cl
+```
+
+When running an installed GPU binary, point `TRX_KERNEL_DIR` at the installed
+kernel directory unless your deployment keeps a source/build-tree kernel layout:
+
+```bash
+TRX_KERNEL_DIR=/opt/trx_vanity/share/trx_vanity/kernel \
+  /opt/trx_vanity/bin/trx_vanity suffix 8888 --gpu --batch-size 65536
+```
+
+TGZ packages can be produced from a configured build with:
+
+```bash
+cpack --config build/CPackConfig.cmake -G TGZ
+```
+
 ## Usage
 
 ```bash
@@ -49,7 +76,8 @@ uses the fastest result for the actual run. Override candidates with
 `--auto-tune-batches <n>`.
 
 `TRX_KERNEL_DIR=/path/to/kernel` can be set when running the GPU binary outside
-the source/build tree so `vanity.cl` can be located.
+the source/build tree so `vanity.cl` can be located. For installed packages,
+use `<prefix>/share/trx_vanity/kernel`.
 
 For CI/smoke tests, CPU mode supports `--max-attempts <n>` to stop after a
 bounded number of generated addresses.

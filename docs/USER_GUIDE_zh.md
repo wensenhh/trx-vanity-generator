@@ -427,6 +427,32 @@ cmake --build . --parallel
 trx_vanity
 ```
 
+如果要安装到固定目录，可以在项目根目录执行：
+
+```bash
+cmake --install build --prefix /opt/trx_vanity
+```
+
+安装后的目录结构大概是：
+
+```text
+/opt/trx_vanity/bin/trx_vanity
+/opt/trx_vanity/share/trx_vanity/kernel/*.cl
+```
+
+使用安装版跑 GPU 时，建议显式指定 kernel 目录：
+
+```bash
+TRX_KERNEL_DIR=/opt/trx_vanity/share/trx_vanity/kernel \
+  /opt/trx_vanity/bin/trx_vanity suffix 8888 --gpu --batch-size 65536
+```
+
+如果需要打包 TGZ：
+
+```bash
+cpack --config build/CPackConfig.cmake -G TGZ
+```
+
 ---
 
 ### 5.4 运行测试
