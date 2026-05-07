@@ -24,8 +24,15 @@ std::vector<size_t> parse_size_list(const std::string& csv) {
     std::stringstream ss(csv);
     std::string item;
     while (std::getline(ss, item, ',')) {
-        if (item.empty()) continue;
-        values.push_back(std::stoull(item));
+        if (item.empty()) {
+            throw std::invalid_argument("empty size item");
+        }
+        size_t pos = 0;
+        unsigned long long value = std::stoull(item, &pos, 10);
+        if (pos != item.size() || value == 0 || value > std::numeric_limits<size_t>::max()) {
+            throw std::invalid_argument("invalid size item");
+        }
+        values.push_back(static_cast<size_t>(value));
     }
     return values;
 }
@@ -61,7 +68,7 @@ void print_usage(const char* prog, std::ostream& os = std::cout) {
        << "Options:\n"
        << "  --gpu                 Use GPU acceleration (OpenCL)\n"
        << "  --batch-size, --gpu-batch <n> GPU addresses per batch (default: 65536)\n"
-       << "  --device <platform:device> Select OpenCL platform/device indexes (default: auto)\n"
+       << "  --device <platform:device> Select OpenCL platform/device indexes, 1-based (default: auto)\n"
        << "  --auto-tune           Benchmark candidate GPU batch sizes and use the fastest\n"
        << "  --auto-tune-sizes <csv> Candidate batch sizes (default: 32768,65536,131072,262144,524288)\n"
        << "  --auto-tune-batches <n> Batches per auto-tune candidate (default: 3)\n"
@@ -244,9 +251,11 @@ int main(int argc, char* argv[]) {
             }
         } else if (arg == "--batches") {
             if (!require_value(i, arg)) return 2;
-            if (!parse_positive_size(argv[++i], gpu_num_batches)) {
-                return fail(argv[0], arg + " must be a positive integer.", "Use 0 by omitting --batches for infinite GPU generation.");
+            uint64_t parsed = 0;
+            if (!parse_nonnegative_u64(argv[++i], parsed) || parsed > std::numeric_limits<size_t>::max()) {
+                return fail(argv[0], arg + " must be a non-negative integer.", "Use --batches 0 for infinite GPU generation.");
             }
+            gpu_num_batches = static_cast<size_t>(parsed);
         } else if (arg == "--max-attempts") {
             if (!require_value(i, arg)) return 2;
             if (!parse_nonnegative_u64(argv[++i], max_attempts)) {
@@ -413,7 +422,12 @@ int main(int argc, char* argv[]) {
         gpu_config.platform_idx = gpu_platform_idx;
         gpu_config.device_idx = gpu_device_idx;
         gpu_generator->set_config(gpu_config);
-        gpu_generator->initialize();
+        try {
+            gpu_generator->initialize();
+        } catch (const std::exception& e) {
+            return fail(argv[0], std::string("GPU initialization failed: ") + e.what(),
+                        "Check that OpenCL is available and that --device uses valid 1-based platform:device indexes, or omit --device for auto selection.");
+        }
     } else {
         cpu_generator = std::make_unique<CPUGenerator>();
         cpu_generator->set_pattern(std::move(pattern));

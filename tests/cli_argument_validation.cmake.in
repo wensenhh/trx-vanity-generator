@@ -69,3 +69,15 @@ assert_matches("missing gpu batch value message" "${missing_gpu_batch}" "--gpu-b
 
 run_cli("missing device value" FALSE missing_device suffix 8888 --device)
 assert_matches("missing device value message" "${missing_device}" "--device.*requires a value")
+
+run_cli("batches zero stays infinite" TRUE batches_zero contains T --max-attempts 1 --batches 0 -t 1)
+assert_matches("batches zero output" "${batches_zero}" "Generation Complete")
+
+run_cli("auto tune sizes empty item" FALSE auto_tune_sizes_empty suffix 8888 --auto-tune-sizes 1,,2)
+assert_matches("auto tune sizes empty item message" "${auto_tune_sizes_empty}" "--auto-tune-sizes.*comma-separated list")
+
+if("@OpenCL_FOUND@" AND "@USE_OPENCL@")
+    run_cli("invalid gpu device index" FALSE invalid_gpu_device contains T --gpu --batch-size 64 --batches 1 --device 99:99)
+    assert_matches("invalid gpu device index message" "${invalid_gpu_device}" "OpenCL|GPU|device|platform")
+    assert_matches("invalid gpu device index hint" "${invalid_gpu_device}" "Hint:")
+endif()
