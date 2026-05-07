@@ -7,7 +7,7 @@ Supports Windows (NVIDIA/AMD) and macOS (Apple Silicon).
 
 - GPU-accelerated address generation via OpenCL
 - Multiple vanity patterns: consecutive, sequential, custom suffix/prefix
-- Real-time output with address + private key
+- Real-time match output with private keys hidden by default
 - Cross-platform: Windows, macOS, Linux
 - Modular architecture for easy extension
 
@@ -62,6 +62,7 @@ cpack --config build/CPackConfig.cmake -G TGZ
 ./trx_vanity suffix 8888888 -t 8
 ./trx_vanity sequential 1 7 -v
 ./trx_vanity contains 520 -o results.csv
+./trx_vanity suffix 8888888 --show-private-key   # unsafe: prints private key with warning
 
 # GPU mode (OpenCL)
 ./trx_vanity suffix 8888888 --gpu --batch-size 65536
@@ -81,6 +82,12 @@ use `<prefix>/share/trx_vanity/kernel`.
 
 For CI/smoke tests, CPU mode supports `--max-attempts <n>` to stop after a
 bounded number of generated addresses.
+
+Security defaults: matched private keys are hidden from stdout and omitted from
+`-o/--output` CSV files unless explicitly requested. Use `--show-private-key` to
+print a private key and `--allow-plaintext-private-key-output` to include private
+keys in plaintext output files; both modes print warnings because leaked private
+keys can spend funds sent to the matched address.
 
 ## Architecture
 
