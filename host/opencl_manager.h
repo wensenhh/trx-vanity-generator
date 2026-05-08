@@ -102,6 +102,7 @@ private:
     cl_context context_;
     cl_command_queue queue_;
     cl_program program_;
+    std::string kernel_source_dir_;
 
     std::vector<OpenCLPlatform> platforms_;
     OpenCLDevice selected_device_;

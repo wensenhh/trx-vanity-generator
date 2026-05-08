@@ -214,6 +214,14 @@ if(BUILD_TESTS)
         add_test(NAME install_tree_gpu_runtime_smoke
             COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/install_tree_smoke.cmake)
         set_tests_properties(install_tree_gpu_runtime_smoke PROPERTIES TIMEOUT 40)
+
+        configure_file(
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/package_gpu_runtime_smoke.cmake.in
+            ${CMAKE_CURRENT_BINARY_DIR}/package_gpu_runtime_smoke.cmake
+            @ONLY)
+        add_test(NAME package_tgz_gpu_runtime_smoke
+            COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/package_gpu_runtime_smoke.cmake)
+        set_tests_properties(package_tgz_gpu_runtime_smoke PROPERTIES TIMEOUT 60)
     endif()
 endif()
 

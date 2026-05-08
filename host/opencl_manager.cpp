@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+#include <filesystem>
 
 namespace trx {
 
@@ -30,6 +31,10 @@ double event_duration_ms(cl_event event, const std::string& operation) {
 
     clReleaseEvent(event);
     return static_cast<double>(end_ns - start_ns) / 1000000.0;
+}
+
+std::string opencl_include_option_value(const std::string& value) {
+    return value;
 }
 
 } // namespace
@@ -270,6 +275,16 @@ void OpenCLManager::load_kernel(const std::string& kernel_name, const std::strin
         throw OpenCLException("Failed to open kernel file: " + source_path);
     }
 
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::path resolved_source = fs::canonical(source_path, ec);
+    if (ec) {
+        ec.clear();
+        resolved_source = fs::absolute(source_path, ec);
+    }
+    kernel_source_dir_ = ec ? fs::path(source_path).parent_path().string()
+                            : resolved_source.parent_path().string();
+
     std::stringstream buffer;
     buffer << file.rdbuf();
     std::string source = buffer.str();
@@ -286,6 +301,7 @@ void OpenCLManager::load_kernel(const std::string& kernel_name, const std::strin
 
 void OpenCLManager::load_kernel_from_source(const std::string& kernel_name, const std::string& source) {
     (void)kernel_name;
+    kernel_source_dir_.clear();
     const char* source_ptr = source.c_str();
     size_t source_len = source.length();
 
@@ -297,7 +313,12 @@ void OpenCLManager::load_kernel_from_source(const std::string& kernel_name, cons
 }
 
 void OpenCLManager::build_program(const std::string& options) {
-    cl_int err = clBuildProgram(program_, 1, &device_, options.c_str(), nullptr, nullptr);
+    std::string effective_options = options;
+    if (!kernel_source_dir_.empty()) {
+        effective_options += " -I" + opencl_include_option_value(kernel_source_dir_);
+    }
+
+    cl_int err = clBuildProgram(program_, 1, &device_, effective_options.c_str(), nullptr, nullptr);
     if (err != CL_SUCCESS) {
         // Get build log
         size_t log_size;
