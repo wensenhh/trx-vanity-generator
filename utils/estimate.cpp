@@ -104,7 +104,15 @@ RuntimeEstimate estimate_runtime(const PatternEstimate& estimate,
                                  uint64_t attempts_done) {
     const double safe_rate = addr_per_second > 0.0 ? addr_per_second : 0.0;
     const double average_seconds = safe_rate > 0.0 ? estimate.expected_attempts / safe_rate : 0.0;
-    double progress = estimate.hit_probability_per_attempt * static_cast<double>(attempts_done);
+    double progress = 0.0;
+    if (attempts_done > 0 && estimate.hit_probability_per_attempt > 0.0) {
+        if (estimate.hit_probability_per_attempt >= 1.0) {
+            progress = 1.0;
+        } else {
+            progress = -std::expm1(static_cast<double>(attempts_done) *
+                                   std::log1p(-estimate.hit_probability_per_attempt));
+        }
+    }
     if (progress > 1.0) progress = 1.0;
     return RuntimeEstimate{safe_rate, average_seconds, progress};
 }

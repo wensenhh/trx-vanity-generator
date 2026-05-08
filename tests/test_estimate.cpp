@@ -43,7 +43,16 @@ void test_runtime_projection_and_probability_progress() {
     auto estimate = estimate_pattern(PatternType::SUFFIX_CUSTOM, "8888");
     auto runtime = estimate_runtime(estimate, 1000.0, 1000);
     assert(runtime.average_seconds > 0.0);
-    expect_close(runtime.probability_progress, 1000.0 / estimate.expected_attempts, 1e-9);
+    const double expected_progress = 1.0 - std::pow(1.0 - estimate.hit_probability_per_attempt, 1000.0);
+    expect_close(runtime.probability_progress, expected_progress, 1e-9);
+
+    auto expected_attempt_runtime = estimate_runtime(
+        estimate,
+        1000.0,
+        static_cast<uint64_t>(std::llround(estimate.expected_attempts)));
+    assert(expected_attempt_runtime.probability_progress > 0.63);
+    assert(expected_attempt_runtime.probability_progress < 0.64);
+
     std::string text = format_estimate_summary(estimate, runtime);
     assert(text.find("probability") != std::string::npos);
     assert(text.find("not guaranteed") != std::string::npos);
