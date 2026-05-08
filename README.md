@@ -70,16 +70,22 @@
 默认行为：
 
 - 终端输出会隐藏私钥。
-- `-o/--output` 结果文件默认不包含私钥。
+- `-o/--output` 结果文件默认不包含私钥，只保存地址、规则、尝试次数和 `private_key_hidden` 标记。
+- 明文结果文件导出私钥已禁用；不要依赖 CSV 保存私钥。
+
+需要保存含私钥结果时，请使用加密导出：
+
+```bash
+# 加密导出会把地址、私钥、规则和尝试次数写入 AES-256-GCM 保护的记录
+export TRX_EXPORT_PASSWORD="use-a-strong-unique-password"
+./trx_vanity suffix 8888 --encrypted-output private-results.trxenc --export-password-env TRX_EXPORT_PASSWORD
+```
 
 高风险显式选项：
 
 ```bash
 # 高风险：把私钥打印到终端
 ./trx_vanity suffix 8888 --show-private-key
-
-# 高风险：允许把私钥写入明文输出文件
-./trx_vanity suffix 8888 -o private-results.csv --allow-plaintext-private-key-output
 ```
 
 使用这些选项前请确认：
@@ -206,7 +212,7 @@ TRON 地址使用 Base58 字符集。简单理解：每多指定 1 位尾号，�
 A：不会。当前 CLI 在本机生成地址。你仍需自己确认运行环境可信，不要运行来路不明的二进制文件。
 
 **Q：为什么 README 说普通用户不要急着用？**
-A：当前是开发者 alpha，缺少 GUI、安装器、加密导出和更完整的新手保护。普通用户更适合等待正式 Release。
+A：当前是开发者 alpha，缺少 GUI、安装器和更完整的新手保护；CLI 已提供基础加密导出。普通用户更适合等待正式 Release。
 
 **Q：我能把 `results.csv` 发给别人确认吗？**
 A：不建议。默认结果不含私钥，但你仍可能误用高风险选项导出私钥。需要协助时请只发脱敏日志，不发私钥、不发完整结果文件。

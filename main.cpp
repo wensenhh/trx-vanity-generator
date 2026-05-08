@@ -2,6 +2,7 @@
 #include "utils/crypto.h"
 #include "utils/pattern.h"
 #include "utils/estimate.h"
+#include "utils/export_encryption.h"
 #include "utils/rng.h"
 #include "host/cpu_generator.h"
 #include "host/gpu_generator.h"
@@ -17,6 +18,7 @@
 #include <atomic>
 #include <cctype>
 #include <limits>
+#include <cstdlib>
 
 using namespace trx;
 
@@ -79,8 +81,14 @@ void print_usage(const char* prog, std::ostream& os = std::cout) {
        << "  --benchmark-json      Print final benchmark metrics as JSON\n"
        << "  --max-attempts <n>    Stop after approximately n attempts (CPU smoke/CI)\n"
        << "  --show-private-key    Print matched private keys to stdout (unsafe; exposes funds)\n"
+       << "  --encrypted-output <file>\n"
+       << "                         Encrypted export including private keys (AES-256-GCM)\n"
+       << "  --export-password <password>\n"
+       << "                         Password for --encrypted-output (unsafe shell history/process-list risk)\n"
+       << "  --export-password-env <name>\n"
+       << "                         Read export password from environment variable <name>\n"
        << "  --allow-plaintext-private-key-output\n"
-       << "                         Allow private keys in plaintext output files (unsafe)\n"
+       << "                         Rejected: plaintext private-key file export is disabled for safety\n"
        << "  -t, --threads <n>     Number of CPU threads (default: auto)\n"
        << "  -o, --output <file>   Output file for matches; private keys are NOT written by default\n"
        << "  -v, --verbose         Show progress every second\n"
@@ -189,6 +197,9 @@ int main(int argc, char* argv[]) {
     int num_threads = static_cast<int>(std::thread::hardware_concurrency());
     if (num_threads <= 0) num_threads = 1;
     std::string output_file;
+    std::string encrypted_output_file;
+    std::string export_password;
+    std::string export_password_env;
     bool verbose = false;
     bool show_private_key = false;
     bool allow_plaintext_private_key_output = false;
@@ -227,6 +238,15 @@ int main(int argc, char* argv[]) {
         } else if ((arg == "-o" || arg == "--output")) {
             if (!require_value(i, arg)) return 2;
             output_file = argv[++i];
+        } else if (arg == "--encrypted-output") {
+            if (!require_value(i, arg)) return 2;
+            encrypted_output_file = argv[++i];
+        } else if (arg == "--export-password") {
+            if (!require_value(i, arg)) return 2;
+            export_password = argv[++i];
+        } else if (arg == "--export-password-env") {
+            if (!require_value(i, arg)) return 2;
+            export_password_env = argv[++i];
         } else if (arg == "-v" || arg == "--verbose") {
             verbose = true;
         } else if (arg == "-h" || arg == "--help") {
@@ -296,6 +316,31 @@ int main(int argc, char* argv[]) {
             return fail(argv[0], "unknown option or unexpected argument '" + arg + "'.",
                         "Run 'trx_vanity --help' to see supported options.");
         }
+    }
+
+    if (allow_plaintext_private_key_output) {
+        return fail(argv[0], "plaintext private-key file export is disabled.",
+                    "Use --encrypted-output <file> --export-password-env <name> to export private keys safely.");
+    }
+    if (!export_password.empty() && !export_password_env.empty()) {
+        return fail(argv[0], "use only one export password source.",
+                    "Choose either --export-password-env <name> or --export-password <password>, not both.");
+    }
+    if (!export_password_env.empty()) {
+        const char* env_password = std::getenv(export_password_env.c_str());
+        if (env_password == nullptr || env_password[0] == '\0') {
+            return fail(argv[0], "environment variable for --export-password-env is not set or is empty.",
+                        "Set the named variable to a strong export password before running the command.");
+        }
+        export_password = env_password;
+    }
+    if (!encrypted_output_file.empty() && export_password.empty()) {
+        return fail(argv[0], "--encrypted-output requires an export password.",
+                    "Prefer --export-password-env <name>; --export-password <password> is available but may be exposed in shell history/process lists.");
+    }
+    if (encrypted_output_file.empty() && !export_password.empty()) {
+        return fail(argv[0], "an export password was provided without --encrypted-output.",
+                    "Passwords are only used for encrypted private-key export.");
     }
 
     auto validate_pattern = [&]() -> int {
@@ -382,17 +427,23 @@ int main(int argc, char* argv[]) {
     if (!use_gpu) {
         std::cout << "Threads: " << num_threads << "\n";
     }
-    std::cout << "Output:  " << (output_file.empty() ? "stdout" : output_file) << "\n\n";
+    const std::string output_label = !encrypted_output_file.empty()
+        ? (output_file.empty() ? (std::string("encrypted:") + encrypted_output_file)
+                               : (output_file + " + encrypted:" + encrypted_output_file))
+        : (output_file.empty() ? "stdout" : output_file);
+    std::cout << "Output:  " << output_label << "\n\n";
     if (show_private_key) {
         std::cerr << "WARNING: --show-private-key will print private keys to stdout. "
                   << "Anyone with this output can spend funds sent to the matched address.\n";
     }
     if (allow_plaintext_private_key_output) {
-        std::cerr << "WARNING: --allow-plaintext-private-key-output will write private keys "
-                  << "to a plaintext file. Protect or delete the file immediately.\n";
+        std::cerr << "WARNING: --allow-plaintext-private-key-output is disabled and cannot write private keys.\n";
     } else if (!output_file.empty()) {
-        std::cout << "Security: private keys are NOT written to the output file by default. "
-                  << "Use --allow-plaintext-private-key-output only if you accept the risk.\n\n";
+        std::cout << "Security: private keys are NOT written to the plaintext output file. "
+                  << "Use --encrypted-output with --export-password-env to export private keys.\n\n";
+    }
+    if (!encrypted_output_file.empty()) {
+        std::cout << "Security: encrypted export enabled (AES-256-GCM). The password is not printed or logged.\n\n";
     }
 
     GPUGenerationConfig gpu_config;
@@ -463,6 +514,18 @@ int main(int argc, char* argv[]) {
     std::ofstream out_file;
     if (!output_file.empty()) {
         out_file.open(output_file, std::ios::app);
+        if (!out_file.is_open()) {
+            return fail(argv[0], "could not open plaintext output file for writing.",
+                        "Check the path and permissions.");
+        }
+    }
+    std::ofstream encrypted_out_file;
+    if (!encrypted_output_file.empty()) {
+        encrypted_out_file.open(encrypted_output_file, std::ios::app);
+        if (!encrypted_out_file.is_open()) {
+            return fail(argv[0], "could not open encrypted output file for writing.",
+                        "Check the path and permissions.");
+        }
     }
 
     auto result_callback = [&](const MatchResult& result) {
@@ -481,14 +544,20 @@ int main(int argc, char* argv[]) {
         std::cout << "╚══════════════════════════════════════════════════════════════╝\n";
 
         if (out_file.is_open()) {
-            if (allow_plaintext_private_key_output) {
-                out_file << result.address << "," << result.private_key_hex << ","
-                         << result.pattern_matched << "," << result.attempts << "\n";
-            } else {
-                out_file << result.address << "," << result.pattern_matched << ","
-                         << result.attempts << ",private_key_hidden\n";
-            }
+            out_file << result.address << "," << result.pattern_matched << ","
+                     << result.attempts << ",private_key_hidden\n";
             out_file.flush();
+        }
+        if (encrypted_out_file.is_open()) {
+            const std::string plaintext_record = result.address + "," + result.private_key_hex + "," +
+                                                 result.pattern_matched + "," + std::to_string(result.attempts);
+            try {
+                encrypted_out_file << encrypt_export_record(plaintext_record, export_password) << "\n";
+                encrypted_out_file.flush();
+            } catch (const std::exception& e) {
+                std::cerr << "Error: encrypted export failed: " << e.what() << "\n";
+                g_running = false;
+            }
         }
     };
 
