@@ -1,5 +1,8 @@
 # Build artifacts
 build/
+_CPack_Packages/
+*.tar.gz
+*.zip
 *.o
 *.a
 *.so
