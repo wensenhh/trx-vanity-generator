@@ -2,7 +2,7 @@
 
 这是一份给普通用户和技术用户看的说明：它解释这个工具能做什么、当前能不能给普通用户直接用、怎么在 Windows / macOS / Linux 上从源码运行 CLI，以及私钥应该如何保护。
 
-> 当前版本定位：**开发者 CLI alpha**。CPU/GPU 命令行路径可用；普通用户 GUI、Windows installer、macOS DMG、加密导出和正式 Release 仍在路线图中。
+> 当前版本定位：**开发者 CLI alpha**。CPU/GPU 命令行路径和基础加密导出可用；普通用户 GUI、Windows installer、macOS DMG 和正式 Release 仍在路线图中。
 
 ## 1. 先看安全边界
 
@@ -12,8 +12,9 @@
 
 - 本工具默认隐藏私钥。
 - `-o/--output` 默认不会把私钥写入结果文件。
+- 只有你显式使用 `--encrypted-output <文件>` 并提供导出密码，含私钥结果才会以 AES-256-GCM 加密形式写入文件；推荐用 `--export-password-env <环境变量名>` 从环境变量读取密码，避免进入 shell history 或进程列表。
 - 只有你显式使用 `--show-private-key`，私钥才会显示在终端。
-- 只有你显式使用 `--allow-plaintext-private-key-output`，私钥才允许写入明文结果文件。
+- 明文私钥文件导出已禁用；不要把私钥保存到未加密 CSV。
 - 不要把私钥发到 Telegram、微信、GitHub、网盘、邮箱、截图同步相册或不可信网站。
 - 高价值地址建议在离线、可信、专用环境中生成，并用加密方式保存私钥。
 
@@ -135,8 +136,11 @@ Windows：
 - `--max-attempts <数量>`：CPU 模式最多尝试多少次，适合 smoke test。
 - `-v, --verbose`：显示 Attempts、Rate、Matches 等进度。
 - `-o, --output <文件>`：保存命中结果；默认不写私钥。
+- `--encrypted-output <文件>`：加密保存含私钥结果；必须同时提供 `--export-password-env <环境变量名>` 或 `--export-password <密码>`。
+- `--export-password-env <环境变量名>`：从环境变量读取加密导出密码（推荐，避免命令行泄露）。
+- `--export-password <密码>`：直接提供加密导出密码；程序不会打印或写入该密码，但可能进入 shell history 或进程列表。
 - `--show-private-key`：高风险，把私钥打印到终端。
-- `--allow-plaintext-private-key-output`：高风险，允许明文结果文件包含私钥。
+- `--allow-plaintext-private-key-output`：已禁用，明文文件不得导出私钥。
 
 ## 7. Windows 从源码构建
 

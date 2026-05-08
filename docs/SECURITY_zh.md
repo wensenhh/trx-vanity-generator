@@ -7,8 +7,9 @@
 - 地址可以公开，私钥不能公开。
 - 任何拿到私钥的人，都可以转走该地址里的 TRX、USDT-TRC20 和其他 TRC20 资产。
 - 本项目默认隐藏私钥，默认输出文件不包含私钥。
+- 需要保存含私钥结果时，优先使用 `--encrypted-output <文件> --export-password-env <环境变量名>`；导出记录使用 AES-256-GCM 加密，密码不会被程序打印或写入文件。
 - 高风险参数 `--show-private-key` 会把私钥打印到终端。
-- 高风险参数 `--allow-plaintext-private-key-output` 会允许私钥写入明文输出文件。
+- `--allow-plaintext-private-key-output` 已禁用，私钥不得写入明文输出文件。
 - 不要把私钥发送到 Telegram、微信、GitHub、网盘、邮箱、截图同步相册或不可信网站。
 
 ## 2. 推荐保存方式

@@ -51,6 +51,7 @@ set(UTIL_SOURCES
     utils/pattern.cpp
     utils/rng.cpp
     utils/estimate.cpp
+    utils/export_encryption.cpp
 )
 
 set(ALL_SOURCES
@@ -131,6 +132,12 @@ if(BUILD_TESTS)
     target_include_directories(test_estimate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_compile_options(test_estimate PRIVATE -Wall -Wextra -O3 -march=native)
     add_test(NAME estimate_difficulty COMMAND test_estimate)
+
+    add_executable(test_export_encryption tests/test_export_encryption.cpp utils/export_encryption.cpp)
+    target_link_libraries(test_export_encryption OpenSSL::Crypto)
+    target_include_directories(test_export_encryption PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_options(test_export_encryption PRIVATE -Wall -Wextra -O3 -march=native)
+    add_test(NAME export_encryption COMMAND test_export_encryption)
 
     if(TARGET test_ecc)
         add_test(NAME ecc_correctness COMMAND test_ecc)
