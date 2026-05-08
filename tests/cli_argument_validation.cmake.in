@@ -72,6 +72,8 @@ assert_matches("missing device value message" "${missing_device}" "--device.*req
 
 run_cli("batches zero stays infinite" TRUE batches_zero contains T --max-attempts 1 --batches 0 -t 1)
 assert_matches("batches zero output" "${batches_zero}" "Generation Complete")
+assert_matches("estimate summary output" "${batches_zero}" "Estimate: difficulty=.*per-attempt probability")
+assert_matches("estimate probability disclaimer" "${batches_zero}" "Probability is an average estimate")
 
 run_cli("auto tune sizes empty item" FALSE auto_tune_sizes_empty suffix 8888 --auto-tune-sizes 1,,2)
 assert_matches("auto tune sizes empty item message" "${auto_tune_sizes_empty}" "--auto-tune-sizes.*comma-separated list")
