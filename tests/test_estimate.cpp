@@ -35,8 +35,40 @@ void test_exact_pattern_difficulty() {
 void test_contains_uses_multiple_windows() {
     auto suffix = estimate_pattern(PatternType::SUFFIX_CUSTOM, "5Z2");
     auto contains = estimate_pattern(PatternType::CONTAINS, "5Z2");
+    const double exact_probability = std::pow(58.0, -3.0);
+    const double expected_probability = 1.0 - std::pow(1.0 - exact_probability,
+                                                       static_cast<double>(TRX_ADDRESS_BASE58_SIZE - 3));
     assert(contains.expected_attempts < suffix.expected_attempts);
     assert(contains.hit_probability_per_attempt > suffix.hit_probability_per_attempt);
+    expect_close(contains.hit_probability_per_attempt, expected_probability);
+}
+
+void test_contains_accounts_for_fixed_tron_leading_t() {
+    auto contains_t = estimate_pattern(PatternType::CONTAINS, "T");
+    expect_close(contains_t.hit_probability_per_attempt, 1.0);
+    expect_close(contains_t.expected_attempts, 1.0);
+
+    auto runtime_t = estimate_runtime(contains_t, 1000.0, 1);
+    expect_close(runtime_t.probability_progress, 1.0);
+
+    auto contains_t8 = estimate_pattern(PatternType::CONTAINS, "T8");
+    const double exact_t8 = std::pow(58.0, -2.0);
+    const double leading_t8 = 1.0 / 58.0;
+    const double expected_t8 = 1.0 - (1.0 - leading_t8) *
+                                     std::pow(1.0 - exact_t8,
+                                              static_cast<double>(TRX_ADDRESS_BASE58_SIZE - 2));
+    expect_close(contains_t8.hit_probability_per_attempt, expected_t8);
+    assert(contains_t8.hit_probability_per_attempt > leading_t8);
+    assert(contains_t8.expected_attempts < 58.0);
+
+    auto contains_t88 = estimate_pattern(PatternType::CONTAINS, "T88");
+    const double exact_t88 = std::pow(58.0, -3.0);
+    const double leading_t88 = std::pow(58.0, -2.0);
+    const double expected_t88 = 1.0 - (1.0 - leading_t88) *
+                                      std::pow(1.0 - exact_t88,
+                                               static_cast<double>(TRX_ADDRESS_BASE58_SIZE - 3));
+    expect_close(contains_t88.hit_probability_per_attempt, expected_t88);
+    assert(contains_t88.expected_attempts < std::pow(58.0, 2.0));
 }
 
 void test_runtime_projection_and_probability_progress() {
@@ -75,6 +107,7 @@ void test_invalid_and_boundary_inputs() {
 int main() {
     test_exact_pattern_difficulty();
     test_contains_uses_multiple_windows();
+    test_contains_accounts_for_fixed_tron_leading_t();
     test_runtime_projection_and_probability_progress();
     test_invalid_and_boundary_inputs();
     std::cout << "estimate tests passed\n";

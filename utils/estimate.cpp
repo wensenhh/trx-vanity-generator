@@ -81,8 +81,13 @@ PatternEstimate estimate_pattern(PatternType type, const std::string& pattern_te
 
     if (type == PatternType::CONTAINS) {
         const size_t address_search_space = TRX_ADDRESS_BASE58_SIZE;
-        const size_t windows = length > address_search_space ? 0 : (address_search_space - length + 1);
-        probability = windows == 0 ? 0.0 : 1.0 - std::pow(1.0 - exact_probability, static_cast<double>(windows));
+        const size_t other_windows = length > address_search_space ? 0 : (address_search_space - length);
+        const double leading_window_probability =
+            pattern_text[0] == 'T' ? std::pow(static_cast<double>(BASE58_ALPHABET_SIZE),
+                                              -static_cast<double>(length - 1))
+                                   : 0.0;
+        probability = 1.0 - (1.0 - leading_window_probability) *
+                            std::pow(1.0 - exact_probability, static_cast<double>(other_windows));
     }
 
     if (probability <= 0.0) {

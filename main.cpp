@@ -63,7 +63,7 @@ void print_usage(const char* prog, std::ostream& os = std::cout) {
        << "Pattern types: prefix, suffix, contains, consecutive, sequential\n"
        << "  prefix <string>              Match after TRON's leading T, e.g. prefix ABC\n"
        << "  suffix <string>              Match address tail, e.g. suffix 8888\n"
-       << "  contains <string>            Match anywhere, e.g. contains 520\n"
+       << "  contains <string>            Match anywhere, including TRON's fixed leading T, e.g. contains 520\n"
        << "  consecutive <char> [length]  Repeated suffix, e.g. consecutive 8 7 -> 8888888\n"
        << "  sequential <start> [length]  Ascending suffix, e.g. sequential 1 7 -> 1234567\n\n"
        << "Options:\n"
