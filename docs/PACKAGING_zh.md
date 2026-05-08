@@ -69,18 +69,23 @@ Windows 用户还需要：
 
 ## 4. 结果文件与私钥提醒
 
-默认 `-o/--output` 不写私钥。只有显式使用高风险参数时，私钥才会显示或写入明文文件：
+默认 `-o/--output` 不写私钥，明文私钥文件导出已禁用。发布包文档、客服反馈和截图示例都不应要求用户上传完整结果文件或私钥。
+
+如果确实需要保存私钥，只推荐加密导出：
 
 ```bash
---show-private-key
---allow-plaintext-private-key-output
+export TRX_EXPORT_PASSWORD="使用高强度密码"
+./bin/trx_vanity suffix 8888 --encrypted-output results.enc --export-password-env TRX_EXPORT_PASSWORD
 ```
 
-含私钥的结果文件必须视为资产控制文件：
+`--show-private-key` 仅用于用户主动在本机终端临时查看私钥，属于高风险操作；不要在截图、日志、Issue、PR、Telegram 或任何远程服务中展示输出。
+
+含私钥或加密私钥的结果文件都必须视为资产控制文件：
 
 - 不发送到 Telegram、微信、邮箱、网盘或 GitHub。
 - 不放入云同步目录。
 - 不截图、不录屏、不贴给客服。
+- 不提交真实 `.env`、导出密码或结果文件。
 - 优先离线保存，并使用系统加密磁盘、加密压缩包或专用密码管理器。
 
 ## 5. GUI wrapper 的最小可交付范围
@@ -94,7 +99,7 @@ Windows 用户还需要：
 5. 开始 / 停止。
 6. 实时显示 Attempts、Rate、ETA(avg)、Prob、错误信息。
 7. 命中结果默认隐藏私钥。
-8. 导出前二次确认；明文私钥导出必须红色高风险提示。
+8. 导出前二次确认；只推荐加密导出，禁止默认或静默生成明文私钥文件。
 9. 不上传私钥、不内置远程日志采集私钥内容。
 
 优先评估 Tauri 或 Qt；Electron 体积较大，可作为备选。
