@@ -224,6 +224,8 @@ install(FILES
     docs/SECURITY_zh.md
     docs/WEBSITE_COPY_zh.md
     docs/PACKAGING_zh.md
+    docs/RELEASE_CHECKLIST_zh.md
+    docs/RELEASE_FEEDBACK_TEMPLATE_zh.md
     DESTINATION share/trx_vanity/docs)
 if(OpenCL_FOUND AND USE_OPENCL)
     install(DIRECTORY kernel/
