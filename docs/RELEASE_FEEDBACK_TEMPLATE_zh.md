@@ -30,6 +30,9 @@
 
 请填写可以复现问题的最小步骤。命令行参数可以保留，但请删除任何真实私钥、真实路径用户名或敏感 token。
 
+- 规则类型：prefix / suffix / contains / consecutive / sequential
+- 规则长度或示例：可填写脱敏后的 pattern，不要附带私钥或完整结果文件
+
 ```bash
 # 示例：
 ./bin/trx_vanity prefix T --max-attempts 64 -t 1

@@ -112,6 +112,7 @@ Release notes 必须包含：
 - 对应 SHA256
 - `SHA256SUMS.txt` 文件
 - 提醒用户下载后先校验再运行
+- GitHub Release 草稿可从 `.github/RELEASE_TEMPLATE.md` 复制模板
 
 用户验证示例：
 
@@ -165,7 +166,7 @@ Checksum: SHA256SUMS.txt attached; users should verify before running
 
 ## 8. 用户反馈模板
 
-用户反馈请优先复制 `docs/RELEASE_FEEDBACK_TEMPLATE_zh.md`。维护者在 Issue/表单中重复提醒：
+用户反馈请优先复制 `docs/RELEASE_FEEDBACK_TEMPLATE_zh.md`，或使用 `.github/ISSUE_TEMPLATE/release_feedback.yml` 提交结构化反馈。维护者在 Issue/表单中重复提醒：
 
 - 不要上传私钥、助记词、keystore。
 - 不要上传完整 `results.csv` 或任何可能含私钥的导出文件。
