@@ -1,6 +1,7 @@
 #include "utils/constants.h"
 #include "utils/crypto.h"
 #include "utils/pattern.h"
+#include "utils/estimate.h"
 #include "utils/rng.h"
 #include "host/cpu_generator.h"
 #include "host/gpu_generator.h"
@@ -105,6 +106,23 @@ bool is_valid_base58_string(const std::string& value) {
     return !value.empty() && std::all_of(value.begin(), value.end(), [](char c) {
         return std::string(BASE58_ALPHABET).find(c) != std::string::npos;
     });
+}
+
+PatternType cli_pattern_type_to_enum(const std::string& pattern_type) {
+    if (pattern_type == "consecutive") return PatternType::SUFFIX_CONSECUTIVE;
+    if (pattern_type == "sequential") return PatternType::SUFFIX_SEQUENTIAL;
+    if (pattern_type == "suffix") return PatternType::SUFFIX_CUSTOM;
+    if (pattern_type == "prefix") return PatternType::PREFIX_CUSTOM;
+    return PatternType::CONTAINS;
+}
+
+size_t cli_pattern_length(const std::string& pattern_type,
+                          const std::string& pattern_arg,
+                          const std::string& pattern_arg2) {
+    if (pattern_type == "consecutive" || pattern_type == "sequential") {
+        return pattern_arg2.empty() ? 7 : static_cast<size_t>(std::stoul(pattern_arg2));
+    }
+    return pattern_arg.size();
 }
 
 int fail(const char* prog, const std::string& message, const std::string& hint = "", bool show_usage = false) {
@@ -355,6 +373,11 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "Pattern: " << pattern->description() << "\n";
+    PatternEstimate pattern_estimate = estimate_pattern(
+        cli_pattern_type_to_enum(pattern_type),
+        pattern_arg,
+        cli_pattern_length(pattern_type, pattern_arg, pattern_arg2));
+    std::cout << format_estimate_summary(pattern_estimate) << "\n";
     std::cout << "Mode:    " << (use_gpu ? "GPU (OpenCL)" : "CPU") << "\n";
     if (!use_gpu) {
         std::cout << "Threads: " << num_threads << "\n";
@@ -504,10 +527,13 @@ int main(int argc, char* argv[]) {
             double avg_rate = attempts / elapsed;
             size_t matches = use_gpu ? gpu_generator->get_results().size() : cpu_generator->get_results().size();
 
+            RuntimeEstimate runtime_estimate = estimate_runtime(pattern_estimate, avg_rate, attempts);
             std::cout << "\r[ " << std::fixed << std::setprecision(1) << elapsed << "s ] "
                       << "Attempts: " << std::setw(12) << attempts
                       << " | Rate: " << std::setw(10) << std::setprecision(0) << rate << " addr/s"
                       << " | Avg: " << std::setw(10) << avg_rate << " addr/s"
+                      << " | ETA(avg): " << std::setw(11) << format_duration(runtime_estimate.average_seconds)
+                      << " | Prob: " << std::setw(7) << std::setprecision(4) << (runtime_estimate.probability_progress * 100.0) << "%"
                       << " | Matches: " << matches
                       << "       " << std::flush;
 

@@ -50,6 +50,7 @@ set(UTIL_SOURCES
     utils/crypto.cpp
     utils/pattern.cpp
     utils/rng.cpp
+    utils/estimate.cpp
 )
 
 set(ALL_SOURCES
@@ -125,6 +126,11 @@ endif()
 # Tests
 if(BUILD_TESTS)
     enable_testing()
+
+    add_executable(test_estimate tests/test_estimate.cpp utils/estimate.cpp)
+    target_include_directories(test_estimate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_options(test_estimate PRIVATE -Wall -Wextra -O3 -march=native)
+    add_test(NAME estimate_difficulty COMMAND test_estimate)
 
     if(TARGET test_ecc)
         add_test(NAME ecc_correctness COMMAND test_ecc)
