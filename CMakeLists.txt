@@ -173,6 +173,14 @@ if(BUILD_TESTS)
         COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cli_argument_validation.cmake)
     set_tests_properties(cli_argument_validation PROPERTIES TIMEOUT 10)
 
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/install_content_smoke.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/install_content_smoke.cmake
+        @ONLY)
+    add_test(NAME install_package_content_smoke
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/install_content_smoke.cmake)
+    set_tests_properties(install_package_content_smoke PROPERTIES TIMEOUT 30)
+
     if(TARGET test_ecc)
         add_test(NAME cli_gpu_smoke
             COMMAND trx_vanity contains T --gpu --batch-size 64 --batches 1)
@@ -196,8 +204,21 @@ if(BUILD_TESTS)
     endif()
 endif()
 
-# Install
+# Install/package layout
+#
+# Keep the install tree friendly for non-developer release archives:
+#   bin/trx_vanity
+#   README.md
+#   share/trx_vanity/docs/*.md
+#   share/trx_vanity/kernel/*.cl
 install(TARGETS trx_vanity DESTINATION bin)
+install(FILES README.md DESTINATION .)
+install(FILES
+    docs/USER_GUIDE_zh.md
+    docs/SECURITY_zh.md
+    docs/WEBSITE_COPY_zh.md
+    docs/PACKAGING_zh.md
+    DESTINATION share/trx_vanity/docs)
 if(OpenCL_FOUND AND USE_OPENCL)
     install(DIRECTORY kernel/
         DESTINATION share/trx_vanity/kernel
@@ -206,6 +227,10 @@ endif()
 
 set(CPACK_PACKAGE_NAME "trx_vanity")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "TRON vanity address generator with OpenCL GPU acceleration")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Local/offline TRON vanity address generator with OpenCL GPU acceleration")
+set(CPACK_PACKAGE_VENDOR "trx-vanity-generator")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "trx_vanity")
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+set(CPACK_GENERATOR "TGZ;ZIP")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 include(CPack)
