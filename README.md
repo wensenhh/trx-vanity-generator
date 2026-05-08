@@ -223,7 +223,7 @@ A：终端按 `Ctrl + C`。
 ## 文档与路线图
 
 - [中文用户指南](docs/USER_GUIDE_zh.md)：更完整的安装、使用、排错和安全说明。
-- [官网首屏/落地页文案草案](docs/WEBSITE_COPY_zh.md)：产品页面结构、截图清单、安全文案。
+- [发布包与首次运行指南](docs/PACKAGING_zh.md)：TGZ/ZIP 包内容、首次运行 smoke test、GUI wrapper 最小范围。
 - [安全说明](docs/SECURITY_zh.md)：私钥、结果文件、分享和发布前检查。
 - [#4 GUI](https://github.com/wensenhh/trx-vanity-generator/issues/4)
 - [#5 Windows 安装包](https://github.com/wensenhh/trx-vanity-generator/issues/5)
@@ -255,9 +255,13 @@ TRX_KERNEL_DIR=/opt/trx_vanity/share/trx_vanity/kernel \
 TGZ 包可由已配置的 build 目录生成：
 
 ```bash
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
 cpack --config build/CPackConfig.cmake -G TGZ
+cpack --config build/CPackConfig.cmake -G ZIP
 ```
 
+当前 CPack 安装树会包含 `README.md`、中文文档和 `kernel/*.cl`，适合继续演进为 macOS/Linux TGZ 和 Windows ZIP 发布包。
 ## Architecture
 
 See `ARCHITECTURE.md` for detailed design.
