@@ -5,6 +5,7 @@ set(binary_dir "@CMAKE_BINARY_DIR@")
 set(install_prefix "${binary_dir}/install-tree-smoke")
 set(installed_bin "${install_prefix}/bin/trx_vanity@CMAKE_EXECUTABLE_SUFFIX@")
 set(installed_kernel_dir "${install_prefix}/share/trx_vanity/kernel")
+set(runtime_cwd "${binary_dir}/install-tree-runtime-cwd")
 
 execute_process(
     COMMAND "@CMAKE_COMMAND@" -E rm -rf "${install_prefix}"
@@ -30,10 +31,31 @@ if(NOT EXISTS "${installed_kernel_dir}/vanity.cl")
 endif()
 
 execute_process(
-    COMMAND "@CMAKE_COMMAND@" -E env "TRX_KERNEL_DIR=${installed_kernel_dir}"
-            "${installed_bin}" contains T --gpu --batch-size 64 --batches 1
-    RESULT_VARIABLE run_result
+    COMMAND "@CMAKE_COMMAND@" -E rm -rf "${runtime_cwd}"
+    RESULT_VARIABLE runtime_cleanup_result
 )
+if(NOT runtime_cleanup_result EQUAL 0)
+    message(FATAL_ERROR "Failed to clean runtime cwd: ${runtime_cwd}")
+endif()
+execute_process(
+    COMMAND "@CMAKE_COMMAND@" -E make_directory "${runtime_cwd}"
+    RESULT_VARIABLE runtime_mkdir_result
+)
+if(NOT runtime_mkdir_result EQUAL 0)
+    message(FATAL_ERROR "Failed to create runtime cwd: ${runtime_cwd}")
+endif()
+
+execute_process(
+    COMMAND "@CMAKE_COMMAND@" -E env "TRX_KERNEL_DIR=${installed_kernel_dir}"
+            "${installed_bin}" prefix ZZZ --gpu --batch-size 64 --batches 1
+    WORKING_DIRECTORY "${runtime_cwd}"
+    RESULT_VARIABLE run_result
+    OUTPUT_VARIABLE run_stdout
+    ERROR_VARIABLE run_stderr
+)
+if(run_stdout MATCHES "Private Key:" OR run_stderr MATCHES "Private Key:")
+    message(FATAL_ERROR "Installed trx_vanity GPU smoke unexpectedly printed a private key")
+endif()
 if(NOT run_result EQUAL 0)
     message(FATAL_ERROR "Installed trx_vanity GPU smoke failed with code ${run_result}")
 endif()
