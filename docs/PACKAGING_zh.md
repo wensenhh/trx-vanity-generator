@@ -1,6 +1,6 @@
 # 发布包与首次运行指南（草案）
 
-本文件面向准备下载 Release 包的普通用户，以及制作 Release 的维护者。当前项目仍是 **CLI alpha**；GUI、DMG、MSI/NSIS installer 还在路线图中。
+本文件面向准备下载 Release 包的普通用户，以及制作 Release 的维护者。当前项目仍是 **CLI alpha**；macOS 已提供最小可用的 `.app`/`.dmg` launcher，完整原生 GUI 与 Windows MSI/NSIS installer 仍在路线图中。
 
 ## 1. 发布包应该包含什么
 
@@ -17,7 +17,20 @@ share/trx_vanity/kernel/*.cl
 
 如果启用 GPU，`kernel/*.cl` 必须随包发布；否则用户复制二进制后容易遇到找不到 `vanity.cl` 的错误。
 
-## 2. macOS / Linux TGZ 用户首次运行
+## 2. macOS .app / .dmg 用户首次运行
+
+macOS 构建会额外生成 `TRX Vanity.app` 和 CPack `DragNDrop` DMG。当前 app 是安全 launcher：双击后打开 Terminal、展示 CLI 帮助、自动设置 app 内置 `TRX_KERNEL_DIR`，不会自动生成地址或输出私钥。详细流程见 `packaging/macos/README_zh.md`。
+
+```bash
+cmake -S . -B build -DBUILD_TESTS=ON
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+cpack --config build/CPackConfig.cmake -G DragNDrop
+```
+
+未签名 Beta 可能触发 Gatekeeper；正式发布应按 `packaging/macos/sign_and_notarize_zh.md` 完成 `codesign`、`notarytool`、`stapler` 和 `spctl` 验证。
+
+## 3. macOS / Linux TGZ 用户首次运行
 
 ```bash
 # 解压
@@ -39,7 +52,7 @@ TRX_KERNEL_DIR="$PWD/share/trx_vanity/kernel" \
 - `share/trx_vanity/docs/USER_GUIDE_zh.md`
 - `share/trx_vanity/docs/SECURITY_zh.md`
 
-## 3. Windows ZIP 用户首次运行（规划）
+## 4. Windows ZIP 用户首次运行（规划）
 
 Windows ZIP 应尽量保持同样布局：
 
@@ -67,7 +80,7 @@ Windows 用户还需要：
 
 正式 Windows installer（MSI/NSIS）发布前，不应在官网文案中写“普通用户一键安装”。
 
-## 4. 结果文件与私钥提醒
+## 5. 结果文件与私钥提醒
 
 默认 `-o/--output` 不写私钥，明文私钥文件导出已禁用。发布包文档、客服反馈和截图示例都不应要求用户上传完整结果文件或私钥。
 
@@ -88,7 +101,7 @@ export TRX_EXPORT_PASSWORD="使用高强度密码"
 - 不提交真实 `.env`、导出密码或结果文件。
 - 优先离线保存，并使用系统加密磁盘、加密压缩包或专用密码管理器。
 
-## 5. GUI wrapper 的最小可交付范围
+## 6. GUI wrapper 的最小可交付范围
 
 短期 GUI 可以先作为本地 wrapper 调用现有 `trx_vanity` CLI，不引入服务器端私钥处理。最小功能：
 
@@ -104,7 +117,7 @@ export TRX_EXPORT_PASSWORD="使用高强度密码"
 
 优先评估 Tauri 或 Qt；Electron 体积较大，可作为备选。
 
-## 6. Release 制作检查
+## 7. Release 制作检查
 
 ```bash
 cmake -S . -B build -DBUILD_TESTS=ON

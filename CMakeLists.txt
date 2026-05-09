@@ -75,6 +75,14 @@ endif()
 # Executable
 add_executable(trx_vanity ${ALL_SOURCES})
 
+if(APPLE)
+    add_executable(trx_vanity_app MACOSX_BUNDLE
+        packaging/macos/trx_vanity_app.cpp)
+    set_target_properties(trx_vanity_app PROPERTIES
+        OUTPUT_NAME "TRX Vanity"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packaging/macos/Info.plist.in")
+endif()
+
 target_link_libraries(trx_vanity
     OpenSSL::SSL
     OpenSSL::Crypto
@@ -127,6 +135,11 @@ if(OpenCL_FOUND AND USE_OPENCL)
     target_link_libraries(test_gpu_match_count_cap Threads::Threads ${OpenCL_LIBRARIES})
     target_include_directories(test_gpu_match_count_cap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
     target_compile_options(test_gpu_match_count_cap PRIVATE -Wall -Wextra -O3 -march=native)
+
+    add_executable(test_opencl_include_path tests/test_opencl_include_path.cpp host/opencl_manager.cpp)
+    target_link_libraries(test_opencl_include_path Threads::Threads ${OpenCL_LIBRARIES})
+    target_include_directories(test_opencl_include_path PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
+    target_compile_options(test_opencl_include_path PRIVATE -Wall -Wextra -O3 -march=native)
 endif()
 
 # Tests
@@ -157,6 +170,10 @@ if(BUILD_TESTS)
     if(TARGET test_gpu_match_count_cap)
         add_test(NAME gpu_match_count_cap COMMAND test_gpu_match_count_cap)
         set_tests_properties(gpu_match_count_cap PROPERTIES TIMEOUT 20)
+    endif()
+    if(TARGET test_opencl_include_path)
+        add_test(NAME opencl_include_path_with_spaces COMMAND test_opencl_include_path)
+        set_tests_properties(opencl_include_path_with_spaces PROPERTIES TIMEOUT 20)
     endif()
 
     add_test(NAME cli_cpu_smoke
@@ -202,6 +219,14 @@ if(BUILD_TESTS)
     add_test(NAME install_package_content_smoke
         COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/install_content_smoke.cmake)
     set_tests_properties(install_package_content_smoke PROPERTIES TIMEOUT 30)
+
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/macos_packaging_files_smoke.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/macos_packaging_files_smoke.cmake
+        @ONLY)
+    add_test(NAME macos_packaging_files_smoke
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/macos_packaging_files_smoke.cmake)
+    set_tests_properties(macos_packaging_files_smoke PROPERTIES TIMEOUT 10)
 
     if(TARGET test_ecc)
         add_test(NAME cli_gpu_smoke
@@ -251,10 +276,40 @@ install(FILES
     docs/RELEASE_CHECKLIST_zh.md
     docs/RELEASE_FEEDBACK_TEMPLATE_zh.md
     DESTINATION share/trx_vanity/docs)
+if(APPLE)
+    install(FILES
+        packaging/macos/README_zh.md
+        packaging/macos/sign_and_notarize_zh.md
+        DESTINATION share/trx_vanity/docs/macos)
+endif()
 if(OpenCL_FOUND AND USE_OPENCL)
     install(DIRECTORY kernel/
         DESTINATION share/trx_vanity/kernel
         FILES_MATCHING PATTERN "*.cl")
+endif()
+
+if(APPLE)
+    install(TARGETS trx_vanity_app BUNDLE DESTINATION .)
+    install(PROGRAMS $<TARGET_FILE:trx_vanity>
+        DESTINATION "TRX Vanity.app/Contents/Resources/bin")
+    install(FILES README.md
+        DESTINATION "TRX Vanity.app/Contents/Resources")
+    install(FILES packaging/macos/README_zh.md
+        packaging/macos/sign_and_notarize_zh.md
+        DESTINATION "TRX Vanity.app/Contents/Resources")
+    install(FILES
+        docs/USER_GUIDE_zh.md
+        docs/SECURITY_zh.md
+        docs/WEBSITE_COPY_zh.md
+        docs/PACKAGING_zh.md
+        docs/RELEASE_CHECKLIST_zh.md
+        docs/RELEASE_FEEDBACK_TEMPLATE_zh.md
+        DESTINATION "TRX Vanity.app/Contents/Resources/docs")
+    if(OpenCL_FOUND AND USE_OPENCL)
+        install(DIRECTORY kernel/
+            DESTINATION "TRX Vanity.app/Contents/Resources/kernel"
+            FILES_MATCHING PATTERN "*.cl")
+    endif()
 endif()
 
 set(CPACK_PACKAGE_NAME "trx_vanity")
@@ -264,5 +319,10 @@ set(CPACK_PACKAGE_VENDOR "trx-vanity-generator")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "trx_vanity")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
 set(CPACK_GENERATOR "TGZ;ZIP")
+if(APPLE)
+    list(APPEND CPACK_GENERATOR "DragNDrop")
+    set(CPACK_DMG_VOLUME_NAME "TRX Vanity ${PROJECT_VERSION}")
+    set(CPACK_DMG_FORMAT "UDZO")
+endif()
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 include(CPack)
