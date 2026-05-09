@@ -168,12 +168,17 @@ size_t GPUGenerator::auto_tune_batch_size() {
                 // while the final blocking read below is the only host sync point.
                 cl_->write_buffer(seeds_buffer, seeds_size, seeds.data(), false);
                 cl_uint zero = 0;
-                cl_->fill_buffer(match_count_buffer, &zero, sizeof(cl_uint), sizeof(cl_uint), false);
+                cl_->write_buffer(match_count_buffer, sizeof(cl_uint), &zero, false);
                 cl_->enqueue_nd_range_timed_ms(kernel_, 1, &global_size, &local_size);
 
                 cl_uint match_count = 0;
                 cl_->read_buffer(match_count_buffer, sizeof(cl_uint), &match_count, true);
-                matches_returned += std::min<uint64_t>(match_count, static_cast<uint64_t>(candidate));
+                if (match_count > candidate) {
+                    throw std::runtime_error(
+                        "GPU returned invalid match_count=" + std::to_string(match_count) +
+                        " greater than auto-tune batch_size=" + std::to_string(candidate));
+                }
+                matches_returned += match_count;
 
                 auto batch_end = std::chrono::steady_clock::now();
                 total_ms += elapsed_ms(batch_start, batch_end);
@@ -356,15 +361,16 @@ void GPUGenerator::generation_loop() {
             batch_stats.seed_upload_ms = elapsed_ms(step_start, step_end);
         }
 
-        // Reset match count on-device instead of doing a blocking 4-byte host
-        // write. This removes a tiny-but-costly sync from every no-match batch.
+        // Reset match count before every launch. Use a queued write instead of
+        // fill so this also works reliably on OpenCL 1.1-era runtimes and avoids
+        // leaving stale/uninitialized counter values for the bounded GPU writer.
         cl_uint zero = 0;
         step_start = std::chrono::steady_clock::now();
         if (config_.profile) {
-            batch_stats.counter_reset_ms = cl_->fill_buffer_timed_ms(
-                match_count_buffer_, &zero, sizeof(cl_uint), sizeof(cl_uint));
+            batch_stats.counter_reset_ms = cl_->write_buffer_timed_ms(
+                match_count_buffer_, sizeof(cl_uint), &zero);
         } else {
-            cl_->fill_buffer(match_count_buffer_, &zero, sizeof(cl_uint), sizeof(cl_uint), false);
+            cl_->write_buffer(match_count_buffer_, sizeof(cl_uint), &zero, false);
         }
         step_end = std::chrono::steady_clock::now();
         if (!config_.profile) {
@@ -403,13 +409,15 @@ void GPUGenerator::generation_loop() {
             batch_stats.count_read_ms = elapsed_ms(step_start, step_end);
         }
 
+        if (match_count > config_.batch_size) {
+            std::cerr << "ERROR: GPU returned invalid match_count=" << match_count
+                      << " greater than batch_size=" << config_.batch_size
+                      << "; stopping GPU generation without reading past result buffers\n";
+            stop_requested_ = true;
+            break;
+        }
+
         if (match_count > 0) {
-            if (match_count > config_.batch_size) {
-                std::cerr << "WARNING: GPU returned match_count=" << match_count
-                          << " greater than batch_size=" << config_.batch_size
-                          << "; clamping readback to allocated buffer size\n";
-                match_count = static_cast<cl_uint>(config_.batch_size);
-            }
             step_start = std::chrono::steady_clock::now();
             if (config_.profile) {
                 batch_stats.result_read_ms += cl_->read_buffer_timed_ms(

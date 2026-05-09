@@ -15,6 +15,27 @@ typedef struct {
     uint reserved[3];
 } gpu_match_result;
 
+// Reserve a result slot without ever allowing the device-side counter to grow
+// past the host-allocated result/address capacity. atomic_inc() returns the old
+// value and increments unconditionally, which makes permissive/debug filters or
+// accidental over-dispatch indistinguishable from counter corruption on the
+// host. A bounded compare-and-swap makes the invariant explicit:
+//     0 <= *match_count <= max_matches
+// Callers only write result buffers when this function returns true.
+bool reserve_match_slot(__global uint* match_count, uint max_matches, uint* slot) {
+    for (;;) {
+        uint current = *match_count;
+        if (current >= max_matches) {
+            return false;
+        }
+
+        uint previous = atomic_cmpxchg(match_count, current, current + 1U);
+        if (previous == current) {
+            *slot = current;
+            return true;
+        }
+    }
+}
 
 // ============================================================================
 // Utility / RNG Functions
@@ -124,8 +145,8 @@ __kernel void generate_addresses(
         private_key[i * 4 + 3] = (uchar)(r.x);
     }
 
-    uint idx = atomic_inc(match_count);
-    if (idx < batch_size) {
+    uint idx = 0;
+    if (reserve_match_slot(match_count, batch_size, &idx)) {
         results[idx].seed[0] = seeds[gid].x;
         results[idx].seed[1] = seeds[gid].y;
         results[idx].seed[2] = seeds[gid].z;
@@ -277,6 +298,25 @@ __kernel void test_base58check_filter(
     result_out[1] = matched ? 1U : 0U;
 }
 
+__kernel void test_match_count_cap(
+    __global gpu_match_result* results,
+    __global uint* match_count,
+    uint max_matches
+) {
+    uint gid = get_global_id(0);
+    uint idx = 0;
+    if (reserve_match_slot(match_count, max_matches, &idx)) {
+        results[idx].seed[0] = gid;
+        results[idx].seed[1] = 0;
+        results[idx].seed[2] = 0;
+        results[idx].seed[3] = 0;
+        results[idx].match_type = 0;
+        results[idx].reserved[0] = gid;
+        results[idx].reserved[1] = 0;
+        results[idx].reserved[2] = 0;
+    }
+}
+
 // ============================================================================
 // Phase 3: Full GPU Pipeline (ECC + Keccak256 + Address Matching)
 // Uses the validated STANDARD-arithmetic ECC path from kernel/test_ecc.cl.
@@ -345,8 +385,8 @@ __kernel void generate_addresses_full_gpu(
     bool is_match = gpu_exact_pattern_match(address_base58, address_len, pattern_type, pattern_len, pattern_chars);
 
     if (is_match) {
-        uint idx = atomic_inc(match_count);
-        if (idx < batch_size) {
+        uint idx = 0;
+        if (reserve_match_slot(match_count, batch_size, &idx)) {
             results[idx].seed[0] = seeds[gid].x;
             results[idx].seed[1] = seeds[gid].y;
             results[idx].seed[2] = seeds[gid].z;
