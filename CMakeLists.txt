@@ -135,6 +135,11 @@ if(OpenCL_FOUND AND USE_OPENCL)
     target_link_libraries(test_gpu_match_count_cap Threads::Threads ${OpenCL_LIBRARIES})
     target_include_directories(test_gpu_match_count_cap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
     target_compile_options(test_gpu_match_count_cap PRIVATE -Wall -Wextra -O3 -march=native)
+
+    add_executable(test_opencl_include_path tests/test_opencl_include_path.cpp host/opencl_manager.cpp)
+    target_link_libraries(test_opencl_include_path Threads::Threads ${OpenCL_LIBRARIES})
+    target_include_directories(test_opencl_include_path PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
+    target_compile_options(test_opencl_include_path PRIVATE -Wall -Wextra -O3 -march=native)
 endif()
 
 # Tests
@@ -165,6 +170,10 @@ if(BUILD_TESTS)
     if(TARGET test_gpu_match_count_cap)
         add_test(NAME gpu_match_count_cap COMMAND test_gpu_match_count_cap)
         set_tests_properties(gpu_match_count_cap PROPERTIES TIMEOUT 20)
+    endif()
+    if(TARGET test_opencl_include_path)
+        add_test(NAME opencl_include_path_with_spaces COMMAND test_opencl_include_path)
+        set_tests_properties(opencl_include_path_with_spaces PROPERTIES TIMEOUT 20)
     endif()
 
     add_test(NAME cli_cpu_smoke

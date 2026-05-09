@@ -34,7 +34,31 @@ double event_duration_ms(cl_event event, const std::string& operation) {
 }
 
 std::string opencl_include_option_value(const std::string& value) {
-    return value;
+    // clBuildProgram receives one flat option string.  OpenCL implementations
+    // (notably Apple OpenCL) tokenize this string themselves, so an include
+    // directory such as "TRX Vanity.app/.../kernel" must be escaped before it is
+    // appended as -I<dir>.  Backslash escaping keeps the option compatible with
+    // both "-I/path" and paths containing whitespace/quotes/backslashes without
+    // relying on shell quoting (there is no shell involved here).
+    std::string escaped;
+    escaped.reserve(value.size());
+    for (const char ch : value) {
+        switch (ch) {
+            case ' ':
+            case '\t':
+            case '\n':
+            case '\r':
+            case '\\':
+            case '"':
+            case '\'':
+                escaped.push_back('\\');
+                break;
+            default:
+                break;
+        }
+        escaped.push_back(ch);
+    }
+    return escaped;
 }
 
 } // namespace
@@ -315,7 +339,10 @@ void OpenCLManager::load_kernel_from_source(const std::string& kernel_name, cons
 void OpenCLManager::build_program(const std::string& options) {
     std::string effective_options = options;
     if (!kernel_source_dir_.empty()) {
-        effective_options += " -I" + opencl_include_option_value(kernel_source_dir_);
+        if (!effective_options.empty()) {
+            effective_options += " ";
+        }
+        effective_options += "-I" + opencl_include_option_value(kernel_source_dir_);
     }
 
     cl_int err = clBuildProgram(program_, 1, &device_, effective_options.c_str(), nullptr, nullptr);
