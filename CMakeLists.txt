@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Options
 option(USE_OPENCL "Enable OpenCL GPU acceleration" ON)
 option(BUILD_TESTS "Build unit tests" OFF)
+option(BUILD_GUI "Build desktop GUI (FLTK)" ON)
 
 # Find packages
 find_package(OpenSSL REQUIRED)
@@ -196,6 +197,23 @@ if(BUILD_TESTS)
         COMMAND trx_vanity sequential 1 4 --max-attempts 64 -t 1)
     set_tests_properties(cli_cpu_sequential_smoke PROPERTIES TIMEOUT 10)
 
+    # GUI smoke test (headless — exercises GUIEngine without display)
+    if(TARGET trx_vanity_gui)
+        add_executable(test_gui_smoke tests/test_gui_smoke.cpp gui/gui_engine.cpp ${HOST_SOURCES} ${UTIL_SOURCES})
+        target_link_libraries(test_gui_smoke OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+        target_include_directories(test_gui_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+        target_compile_options(test_gui_smoke PRIVATE -Wall -Wextra -O3 -march=native)
+        if(OpenCL_FOUND AND USE_OPENCL)
+            if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/host/opencl_manager.cpp")
+                target_sources(test_gui_smoke PRIVATE host/opencl_manager.cpp host/gpu_generator.cpp)
+                target_link_libraries(test_gui_smoke ${OpenCL_LIBRARIES})
+                target_include_directories(test_gui_smoke PRIVATE ${OpenCL_INCLUDE_DIRS})
+            endif()
+        endif()
+        add_test(NAME gui_engine_smoke COMMAND test_gui_smoke)
+        set_tests_properties(gui_engine_smoke PROPERTIES TIMEOUT 15)
+    endif()
+
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_private_key_output.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/cli_private_key_output.cmake
@@ -324,5 +342,76 @@ if(APPLE)
     set(CPACK_DMG_VOLUME_NAME "TRX Vanity ${PROJECT_VERSION}")
     set(CPACK_DMG_FORMAT "UDZO")
 endif()
+# ============================================================================
+# GUI target (FLTK)
+# ============================================================================
+if(BUILD_GUI)
+    find_package(FLTK QUIET)
+    if(NOT FLTK_FOUND)
+        # Try pkg-config fallback
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(FLTK fltk QUIET)
+        endif()
+    endif()
+    if(NOT FLTK_FOUND)
+        # Manual search common paths
+        find_path(FLTK_INCLUDE_DIRS FL/Fl.H
+            PATHS /usr/include /usr/local/include /opt/homebrew/include /opt/local/include)
+        find_library(FLTK_LIBRARIES fltk
+            PATHS /usr/lib /usr/local/lib /opt/homebrew/lib /opt/local/lib)
+        if(FLTK_INCLUDE_DIRS AND FLTK_LIBRARIES)
+            set(FLTK_FOUND TRUE)
+        endif()
+    endif()
+
+    if(FLTK_FOUND)
+        message(STATUS "FLTK found — GUI target enabled")
+        set(GUI_SOURCES
+            gui/main_gui.cpp
+            gui/gui_engine.cpp
+            ${HOST_SOURCES}
+            ${UTIL_SOURCES}
+        )
+        if(OpenCL_FOUND AND USE_OPENCL)
+            if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/host/opencl_manager.cpp")
+                list(APPEND GUI_SOURCES
+                    host/opencl_manager.cpp
+                    host/gpu_generator.cpp
+                )
+            endif()
+        endif()
+        add_executable(trx_vanity_gui ${GUI_SOURCES})
+        target_link_libraries(trx_vanity_gui
+            OpenSSL::SSL
+            OpenSSL::Crypto
+            Threads::Threads
+            ${FLTK_LIBRARIES}
+        )
+        if(OpenCL_FOUND AND USE_OPENCL)
+            target_link_libraries(trx_vanity_gui ${OpenCL_LIBRARIES})
+        endif()
+        target_include_directories(trx_vanity_gui PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${FLTK_INCLUDE_DIRS}
+        )
+        if(MSVC)
+            target_compile_options(trx_vanity_gui PRIVATE /W4 /O2)
+        else()
+            target_compile_options(trx_vanity_gui PRIVATE -Wall -Wextra -O3 -march=native)
+        endif()
+        if(APPLE)
+            # macOS may need Cocoa framework for FLTK
+            find_library(COCOA_LIBRARY Cocoa)
+            if(COCOA_LIBRARY)
+                target_link_libraries(trx_vanity_gui ${COCOA_LIBRARY})
+            endif()
+        endif()
+        install(TARGETS trx_vanity_gui DESTINATION bin)
+    else()
+        message(WARNING "FLTK not found — GUI target disabled. Install FLTK or set BUILD_GUI=OFF.")
+    endif()
+endif()
+
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 include(CPack)
