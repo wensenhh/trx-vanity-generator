@@ -31,6 +31,7 @@
 - **普通用户：**建议等待 GUI 和正式 Release。路线图见 [#4 GUI](https://github.com/wensenhh/trx-vanity-generator/issues/4)、[#5 Windows](https://github.com/wensenhh/trx-vanity-generator/issues/5)、[#6 macOS](https://github.com/wensenhh/trx-vanity-generator/issues/6)、[#11 Release](https://github.com/wensenhh/trx-vanity-generator/issues/11)。
 - **开发者 / 技术用户：**从源码构建 CLI，见下方 Windows / macOS / Linux 步骤。
 - **官网与截图素材：**当前仅提供占位说明，不能使用真实私钥或真实结果 CSV。见 [docs/WEBSITE_COPY_zh.md](docs/WEBSITE_COPY_zh.md) 和 [docs/assets/README.md](docs/assets/README.md)。
+- **发布检查与反馈：**维护者发布前请使用 [docs/RELEASE_CHECKLIST_zh.md](docs/RELEASE_CHECKLIST_zh.md)；用户反馈请使用 [docs/RELEASE_FEEDBACK_TEMPLATE_zh.md](docs/RELEASE_FEEDBACK_TEMPLATE_zh.md)，且不要上传私钥、结果 CSV、`.env` 或 token。
 
 ## 3 分钟快速理解
 
