@@ -24,7 +24,10 @@ typedef struct {
 // Callers only write result buffers when this function returns true.
 bool reserve_match_slot(__global uint* match_count, uint max_matches, uint* slot) {
     for (;;) {
-        uint current = *match_count;
+        // OpenCL 1.2 lacks a portable atomic_load for legacy atomics. An atomic
+        // add of zero gives us a synchronized read of the current counter value
+        // without changing it, avoiding a non-atomic load racing with CAS.
+        uint current = atomic_add(match_count, 0U);
         if (current >= max_matches) {
             return false;
         }
