@@ -1,0 +1,137 @@
+name: Release / Runtime Feedback
+
+description: Report install, packaging, GPU runtime, release, or documentation issues.
+title: "release: <short summary>"
+labels:
+  - release-feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. For asset safety, **do not upload or paste private keys, seed phrases, keystore files, full results CSV, .env files, tokens, API keys, encrypted export passwords, or complete exported result files**. Screenshots and logs must be redacted.
+
+  - type: dropdown
+    id: feedback_type
+    attributes:
+      label: Feedback type
+      options:
+        - Bug
+        - Install issue
+        - Runtime issue
+        - GPU / OpenCL issue
+        - Documentation issue
+        - Security concern
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Blocking
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: input
+    id: release_version
+    attributes:
+      label: Release version or tag
+      placeholder: vX.Y.Z
+    validations:
+      required: true
+
+  - type: input
+    id: artifact
+    attributes:
+      label: Artifact filename
+      placeholder: trx_vanity-...tar.gz / trx_vanity-...zip
+
+  - type: input
+    id: commit_sha
+    attributes:
+      label: Commit SHA from release notes
+      placeholder: <sha>
+
+  - type: dropdown
+    id: checksum_verified
+    attributes:
+      label: SHA256 verified locally?
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and version
+      placeholder: macOS 14 arm64 / Ubuntu 24.04 x86_64 / Windows 11 x64
+    validations:
+      required: true
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU model and OpenCL runtime/driver, if relevant
+      placeholder: Apple M1 OpenCL / NVIDIA ... / AMD ... / CPU only
+
+  - type: dropdown
+    id: pattern_type
+    attributes:
+      label: Rule type, if relevant
+      options:
+        - prefix
+        - suffix
+        - contains
+        - consecutive
+        - sequential
+        - not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Include a minimal command if possible. Redact private keys, usernames, tokens, and sensitive paths.
+      render: bash
+      placeholder: ./bin/trx_vanity prefix T --max-attempts 64 -t 1
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result / redacted logs
+      description: Paste only redacted stdout/stderr. Do not paste private keys or full result files.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checklist
+      options:
+        - label: I did not upload or paste private keys, seed phrases, keystore files, or encrypted export passwords.
+          required: true
+        - label: I did not upload complete results.csv or any complete exported result file.
+          required: true
+        - label: I did not upload .env files, tokens, API keys, wallet configs, or cloud credentials.
+          required: true
+        - label: I redacted usernames, absolute paths, machine names, transaction hashes, and other sensitive identifiers as needed.
+          required: true

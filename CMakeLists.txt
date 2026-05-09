@@ -130,6 +130,11 @@ if(OpenCL_FOUND AND USE_OPENCL)
     target_link_libraries(test_gpu_full_pipeline OpenSSL::SSL OpenSSL::Crypto Threads::Threads ${OpenCL_LIBRARIES})
     target_include_directories(test_gpu_full_pipeline PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
     target_compile_options(test_gpu_full_pipeline PRIVATE -Wall -Wextra -O3 -march=native)
+
+    add_executable(test_gpu_match_count_cap tests/test_gpu_match_count_cap.cpp host/opencl_manager.cpp)
+    target_link_libraries(test_gpu_match_count_cap Threads::Threads ${OpenCL_LIBRARIES})
+    target_include_directories(test_gpu_match_count_cap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
+    target_compile_options(test_gpu_match_count_cap PRIVATE -Wall -Wextra -O3 -march=native)
 endif()
 
 # Tests
@@ -156,6 +161,10 @@ if(BUILD_TESTS)
     if(TARGET test_gpu_full_pipeline)
         add_test(NAME gpu_full_pipeline_deterministic COMMAND test_gpu_full_pipeline)
         set_tests_properties(gpu_full_pipeline_deterministic PROPERTIES TIMEOUT 20)
+    endif()
+    if(TARGET test_gpu_match_count_cap)
+        add_test(NAME gpu_match_count_cap COMMAND test_gpu_match_count_cap)
+        set_tests_properties(gpu_match_count_cap PROPERTIES TIMEOUT 20)
     endif()
 
     add_test(NAME cli_cpu_smoke
@@ -255,6 +264,8 @@ install(FILES
     docs/SECURITY_zh.md
     docs/WEBSITE_COPY_zh.md
     docs/PACKAGING_zh.md
+    docs/RELEASE_CHECKLIST_zh.md
+    docs/RELEASE_FEEDBACK_TEMPLATE_zh.md
     DESTINATION share/trx_vanity/docs)
 if(APPLE)
     install(FILES
