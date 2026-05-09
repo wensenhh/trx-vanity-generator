@@ -1,6 +1,6 @@
 # 发布包与首次运行指南（草案）
 
-本文件面向准备下载 Release 包的普通用户，以及制作 Release 的维护者。当前项目仍是 **CLI alpha**；GUI、DMG、MSI/NSIS installer 还在路线图中。
+本文件面向准备下载 Release 包的普通用户，以及制作 Release 的维护者。当前项目仍是 **CLI alpha**；macOS 已提供最小可用的 `.app`/`.dmg` launcher，完整原生 GUI 与 Windows MSI/NSIS installer 仍在路线图中。
 
 ## 1. 发布包应该包含什么
 
