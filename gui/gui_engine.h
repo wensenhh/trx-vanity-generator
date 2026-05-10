@@ -118,6 +118,11 @@ private:
     uint64_t max_attempts_{0}; // 0 = unlimited
     size_t num_threads_{0};    // 0 = use default
     size_t batch_size_{0};     // 0 = use default
+
+    // Pattern params for GPU recreation
+    PatternType pattern_type_{PatternType::SUFFIX_CUSTOM};
+    std::string pattern_param1_;
+    std::string pattern_param2_;
 };
 
 } // namespace trx
