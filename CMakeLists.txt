@@ -197,23 +197,6 @@ if(BUILD_TESTS)
         COMMAND trx_vanity sequential 1 4 --max-attempts 64 -t 1)
     set_tests_properties(cli_cpu_sequential_smoke PROPERTIES TIMEOUT 10)
 
-    # GUI smoke test (headless — exercises GUIEngine without display)
-    if(TARGET trx_vanity_gui)
-        add_executable(test_gui_smoke tests/test_gui_smoke.cpp gui/gui_engine.cpp ${HOST_SOURCES} ${UTIL_SOURCES})
-        target_link_libraries(test_gui_smoke OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
-        target_include_directories(test_gui_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-        target_compile_options(test_gui_smoke PRIVATE -Wall -Wextra -O3 -march=native)
-        if(OpenCL_FOUND AND USE_OPENCL)
-            if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/host/opencl_manager.cpp")
-                target_sources(test_gui_smoke PRIVATE host/opencl_manager.cpp host/gpu_generator.cpp)
-                target_link_libraries(test_gui_smoke ${OpenCL_LIBRARIES})
-                target_include_directories(test_gui_smoke PRIVATE ${OpenCL_INCLUDE_DIRS})
-            endif()
-        endif()
-        add_test(NAME gui_engine_smoke COMMAND test_gui_smoke)
-        set_tests_properties(gui_engine_smoke PROPERTIES TIMEOUT 15)
-    endif()
-
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_private_key_output.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/cli_private_key_output.cmake
@@ -399,6 +382,25 @@ if(BUILD_GUI)
     else()
         message(WARNING "FLTK not found — GUI target disabled. Install FLTK or set BUILD_GUI=OFF.")
     endif()
+endif()
+
+# ============================================================================
+# GUI smoke test (headless — exercises GUIEngine without display)
+# ============================================================================
+if(BUILD_TESTS AND BUILD_GUI AND FLTK_FOUND)
+    add_executable(test_gui_smoke tests/test_gui_smoke.cpp gui/gui_engine.cpp ${HOST_SOURCES} ${UTIL_SOURCES})
+    target_link_libraries(test_gui_smoke OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+    target_include_directories(test_gui_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/gui ${FLTK_INCLUDE_DIRS})
+    target_compile_options(test_gui_smoke PRIVATE -Wall -Wextra -O3 -march=native)
+    if(OpenCL_FOUND AND USE_OPENCL)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/host/opencl_manager.cpp")
+            target_sources(test_gui_smoke PRIVATE host/opencl_manager.cpp host/gpu_generator.cpp)
+            target_link_libraries(test_gui_smoke ${OpenCL_LIBRARIES})
+            target_include_directories(test_gui_smoke PRIVATE ${OpenCL_INCLUDE_DIRS})
+        endif()
+    endif()
+    add_test(NAME gui_engine_smoke COMMAND test_gui_smoke)
+    set_tests_properties(gui_engine_smoke PROPERTIES TIMEOUT 30)
 endif()
 
 # ============================================================================

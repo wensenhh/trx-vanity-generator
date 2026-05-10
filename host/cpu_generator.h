@@ -33,7 +33,7 @@ public:
     // Generation control
     void start();
     void stop();
-    bool is_running() const { return running_.load(); }
+    bool is_running() const;
 
     // Results
     std::vector<MatchResult> get_results();

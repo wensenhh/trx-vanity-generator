@@ -68,6 +68,13 @@ public:
     bool is_running() const;
     bool is_paused() const;
 
+    // Export
+    enum class ExportFormat { CSV, JSON };
+    bool export_matches(const std::string& filepath,
+                        ExportFormat format,
+                        const std::string& passphrase,
+                        std::string& error_out);
+
     // Callbacks (thread-safe, called from worker threads)
     using MatchCallback = std::function<void(const GUIMatchResult&)>;
     using StatsCallback = std::function<void(const GUIStats&)>;
@@ -106,6 +113,11 @@ private:
     // Background stats ticker thread
     std::thread ticker_thread_;
     void ticker_loop();
+
+    // Cached configuration
+    uint64_t max_attempts_{0}; // 0 = unlimited
+    size_t num_threads_{0};    // 0 = use default
+    size_t batch_size_{0};     // 0 = use default
 };
 
 } // namespace trx
