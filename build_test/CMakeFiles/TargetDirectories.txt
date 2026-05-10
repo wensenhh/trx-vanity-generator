@@ -1,0 +1,14 @@
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/trx_vanity.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/trx_vanity_app.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/test_estimate.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/test_export_encryption.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/test_history.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/package.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/package_source.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/test.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/edit_cache.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/rebuild_cache.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/list_install_components.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/install.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/install/local.dir
+/Users/vincen/Vincen/code/trx_addr/build_test/CMakeFiles/install/strip.dir

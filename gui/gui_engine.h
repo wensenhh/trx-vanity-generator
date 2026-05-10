@@ -5,6 +5,7 @@
 #include "utils/crypto.h"
 #include "utils/pattern.h"
 #include "utils/rng.h"
+#include "utils/history.h"
 #include "host/cpu_generator.h"
 #include "host/gpu_generator.h"
 #include <atomic>
@@ -75,6 +76,21 @@ public:
                         const std::string& passphrase,
                         std::string& error_out);
 
+    // History
+    bool save_history(const std::string& passphrase,
+                      const std::string& filepath,
+                      std::string& error_out);
+    bool load_history(const std::string& passphrase,
+                      const std::string& filepath,
+                      std::string& error_out);
+    std::vector<HistoryEntry> get_history_entries() const;
+    void clear_history();
+
+    // Get current pattern info (for history)
+    std::string get_pattern_type_str() const;
+    std::string get_pattern_param1() const;
+    std::string get_pattern_param2() const;
+
     // Callbacks (thread-safe, called from worker threads)
     using MatchCallback = std::function<void(const GUIMatchResult&)>;
     using StatsCallback = std::function<void(const GUIStats&)>;
@@ -123,6 +139,9 @@ private:
     PatternType pattern_type_{PatternType::SUFFIX_CUSTOM};
     std::string pattern_param1_;
     std::string pattern_param2_;
+
+    // History manager
+    mutable HistoryManager history_mgr_;
 };
 
 } // namespace trx

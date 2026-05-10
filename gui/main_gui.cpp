@@ -1,6 +1,7 @@
 #include "gui_engine.h"
 #include "utils/pattern.h"
 #include "utils/estimate.h"
+#include "utils/history.h"
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Input.H>
@@ -243,6 +244,18 @@ static void pause_generation() {
 static void stop_generation() {
     if (!g_engine) return;
     append_log("正在停止...");
+
+    // Auto-save history on stop
+    {
+        std::string hist_err;
+        bool hist_ok = g_engine->save_history("trx_vanity_history", "", hist_err);
+        if (hist_ok) {
+            append_log("历史记录已自动保存");
+        } else {
+            append_log(("历史记录保存提示: " + hist_err).c_str());
+        }
+    }
+
     g_engine->stop();
     g_engine.reset();
     append_log("已停止");
@@ -371,11 +384,84 @@ static void show_export_dialog() {
 static void on_window_close(Fl_Widget*, void*) {
     g_shutting_down = true;
     if (g_engine) {
+        // Auto-save history before exit
+        std::string hist_err;
+        g_engine->save_history("trx_vanity_history", "", hist_err);
         g_engine->stop();
         g_engine.reset();
     }
     // No private key logging
     exit(0);
+}
+
+// ============================================================================
+// History dialog
+// ============================================================================
+
+static void show_history_dialog() {
+    // Load history
+    auto history_mgr = std::make_unique<trx::HistoryManager>();
+    std::string hist_path = trx::HistoryManager::default_history_path();
+    history_mgr->load(hist_path);
+    auto entries = history_mgr->get_entries();
+
+    int win_w = 640, win_h = 420;
+    Fl_Window* hist_win = new Fl_Window(win_w, win_h, "生成历史记录");
+    hist_win->set_modal();
+
+    Fl_Text_Display* info = new Fl_Text_Display(10, 10, win_w - 20, 30, "");
+    info->box(FL_NO_BOX);
+    {
+        std::string label_text = "共 " + std::to_string(entries.size()) + " 条历史记录";
+        info->copy_label(label_text.c_str());
+    }
+
+    // Scrollable list of entries
+    Fl_Scroll* scroll = new Fl_Scroll(10, 45, win_w - 20, win_h - 100);
+    scroll->box(FL_THIN_DOWN_BOX);
+
+    int y = 10;
+    for (size_t i = 0; i < entries.size() && i < 50; ++i) {
+        const auto& e = entries[i];
+        std::string line1 = "[" + std::to_string(i + 1) + "] " + e.address + " | " + e.pattern_matched;
+        std::string line2 = "    类型: " + e.pattern_type + " | 参数: " + e.pattern_param1;
+        if (!e.pattern_param2.empty()) line2 += " / " + e.pattern_param2;
+        line2 += " | 尝试: " + std::to_string(e.attempts);
+        line2 += " | 时间: " + e.timestamp_iso;
+
+        Fl_Box* b1 = new Fl_Box(10, y, win_w - 50, 18, "");
+        b1->copy_label(line1.c_str());
+        b1->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
+        b1->box(FL_NO_BOX);
+        b1->labelfont(FL_BOLD);
+        b1->labelcolor(FL_DARK_BLUE);
+        scroll->add(b1);
+
+        Fl_Box* b2 = new Fl_Box(10, y + 18, win_w - 50, 16, "");
+        b2->copy_label(line2.c_str());
+        b2->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
+        b2->box(FL_NO_BOX);
+        b2->labelsize(11);
+        b2->labelcolor(FL_DARK3);
+        scroll->add(b2);
+
+        y += 42;
+    }
+
+    scroll->end();
+
+    // Buttons
+    Fl_Button* close_btn = new Fl_Button(win_w / 2 - 40, win_h - 45, 80, 30, "关闭");
+    close_btn->callback([](Fl_Widget*, void* data) {
+        static_cast<Fl_Window*>(data)->hide();
+    }, hist_win);
+
+    hist_win->end();
+    hist_win->show();
+    while (hist_win->shown()) {
+        Fl::wait();
+    }
+    delete hist_win;
 }
 
 // ============================================================================
@@ -432,6 +518,9 @@ int main(int argc, char** argv) {
     g_btn_export->callback([](Fl_Widget*, void*) { show_export_dialog(); });
     g_btn_export->deactivate();
 
+    Fl_Button* g_btn_history = new Fl_Button(520, 70, 80, 25, "历史记录");
+    g_btn_history->callback([](Fl_Widget*, void*) { show_history_dialog(); });
+
     // Stats
     g_stats_box = new Fl_Box(10, 105, W - 20, 20, "准备就绪");
     g_stats_box->box(FL_THIN_DOWN_BOX);
@@ -449,6 +538,7 @@ int main(int argc, char** argv) {
     g_results_scroll->box(FL_THIN_DOWN_BOX);
 
     g_main_win->end();
+    g_main_win->resizable(g_results_scroll);
     g_main_win->show(argc, argv);
 
     append_log("TRX Vanity GUI MVP 已启动");
