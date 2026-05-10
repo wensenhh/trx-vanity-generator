@@ -330,18 +330,6 @@ if(APPLE)
     endif()
 endif()
 
-set(CPACK_PACKAGE_NAME "trx_vanity")
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Local/offline TRON vanity address generator with OpenCL GPU acceleration")
-set(CPACK_PACKAGE_VENDOR "trx-vanity-generator")
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "trx_vanity")
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
-set(CPACK_GENERATOR "TGZ;ZIP")
-if(APPLE)
-    list(APPEND CPACK_GENERATOR "DragNDrop")
-    set(CPACK_DMG_VOLUME_NAME "TRX Vanity ${PROJECT_VERSION}")
-    set(CPACK_DMG_FORMAT "UDZO")
-endif()
 # ============================================================================
 # GUI target (FLTK)
 # ============================================================================
@@ -413,5 +401,59 @@ if(BUILD_GUI)
     endif()
 endif()
 
+# ============================================================================
+# CPack packaging configuration
+# ============================================================================
+set(CPACK_PACKAGE_NAME "trx_vanity")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Local/offline TRON vanity address generator with OpenCL GPU acceleration")
+set(CPACK_PACKAGE_VENDOR "trx-vanity-generator")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "trx_vanity")
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+
+set(CPACK_GENERATOR "TGZ;ZIP")
+if(APPLE)
+    list(APPEND CPACK_GENERATOR "DragNDrop")
+    set(CPACK_DMG_VOLUME_NAME "TRX Vanity ${PROJECT_VERSION}")
+    set(CPACK_DMG_FORMAT "UDZO")
+endif()
+
+if(WIN32)
+    list(APPEND CPACK_GENERATOR "NSIS")
+    # NSIS package metadata
+    set(CPACK_NSIS_PACKAGE_NAME "TRX Vanity Generator")
+    set(CPACK_NSIS_DISPLAY_NAME "TRX Vanity Generator ${PROJECT_VERSION}")
+    set(CPACK_NSIS_HELP_LINK "https://github.com/wensenhh/trx-vanity-generator")
+    set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/wensenhh/trx-vanity-generator")
+    # Add bin directory to user PATH
+    set(CPACK_NSIS_MODIFY_PATH ON)
+    # Uninstall existing version before reinstalling
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    # Show "Run TRX Vanity" checkbox on finish page
+    set(CPACK_NSIS_MUI_FINISHPAGE_RUN "bin/trx_vanity_gui.bat")
+    # Extra NSIS commands: create Start Menu shortcuts and Desktop shortcut
+    set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
+        CreateDirectory '$SMPROGRAMS\\TRX Vanity'
+        CreateShortcut '$SMPROGRAMS\\TRX Vanity\\TRX Vanity (GUI Launcher).lnk' '$INSTDIR\\bin\\trx_vanity_gui.bat' '' '$INSTDIR\\bin\\trx_vanity.exe' 0
+        CreateShortcut '$SMPROGRAMS\\TRX Vanity\\TRX Vanity CLI.lnk' '$INSTDIR\\bin\\trx_vanity.exe' '' '$INSTDIR\\bin\\trx_vanity.exe' 0
+        CreateShortcut '$SMPROGRAMS\\TRX Vanity\\Uninstall.lnk' '$INSTDIR\\uninstall.exe'
+        CreateShortcut '$DESKTOP\\TRX Vanity.lnk' '$INSTDIR\\bin\\trx_vanity_gui.bat' '' '$INSTDIR\\bin\\trx_vanity.exe' 0
+    ")
+    # Extra NSIS commands: remove shortcuts on uninstall
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
+        Delete '$SMPROGRAMS\\TRX Vanity\\TRX Vanity (GUI Launcher).lnk'
+        Delete '$SMPROGRAMS\\TRX Vanity\\TRX Vanity CLI.lnk'
+        Delete '$SMPROGRAMS\\TRX Vanity\\Uninstall.lnk'
+        RMDir '$SMPROGRAMS\\TRX Vanity'
+        Delete '$DESKTOP\\TRX Vanity.lnk'
+    ")
+endif()
+
+# Install Windows launcher script so it ends up in bin/ for NSIS/ZIP packages
+if(WIN32)
+    install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/trx_vanity_gui.bat" DESTINATION bin)
+endif()
+
 include(CPack)
