@@ -1,5 +1,9 @@
 #include "gui_engine.h"
+#include "utils/export_encryption.h"
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 #include <thread>
 #include <chrono>
 
@@ -14,6 +18,16 @@ GUIEngine::~GUIEngine() {
 void GUIEngine::set_pattern(std::unique_ptr<Pattern> pattern) {
     cpu_gen_ = std::make_unique<CPUGenerator>();
     cpu_gen_->set_pattern(std::move(pattern));
+    // Re-apply any previously set configuration
+    if (max_attempts_ > 0) {
+        cpu_gen_->set_max_attempts(max_attempts_);
+    }
+    if (num_threads_ > 0) {
+        cpu_gen_->set_num_threads(num_threads_);
+    }
+    if (batch_size_ > 0) {
+        cpu_gen_->set_batch_size(batch_size_);
+    }
 }
 
 void GUIEngine::set_mode(GUIMode mode) {
@@ -21,15 +35,17 @@ void GUIEngine::set_mode(GUIMode mode) {
 }
 
 void GUIEngine::set_num_threads(size_t threads) {
+    num_threads_ = threads;
     if (cpu_gen_) cpu_gen_->set_num_threads(threads);
 }
 
 void GUIEngine::set_batch_size(size_t size) {
-    // GPU batch size placeholder; CPU uses internal batch
-    (void)size;
+    batch_size_ = size;
+    if (cpu_gen_) cpu_gen_->set_batch_size(size);
 }
 
 void GUIEngine::set_max_attempts(uint64_t max) {
+    max_attempts_ = max;
     if (cpu_gen_) cpu_gen_->set_max_attempts(max);
 }
 
@@ -37,9 +53,16 @@ void GUIEngine::start() {
     if (running_.load()) return;
     if (!cpu_gen_) return;
 
+    // Ensure any previous ticker thread is fully cleaned up
+    if (ticker_thread_.joinable()) {
+        stop_requested_ = true;
+        ticker_thread_.join();
+        ticker_thread_ = std::thread();
+    }
+    stop_requested_ = false;
+
     running_ = true;
     paused_ = false;
-    stop_requested_ = false;
 
     {
         std::lock_guard<std::mutex> lock(stats_mutex_);
@@ -65,6 +88,11 @@ void GUIEngine::start() {
 void GUIEngine::pause() {
     paused_ = true;
     if (cpu_gen_) cpu_gen_->stop();
+    // Join ticker thread so it doesn't keep running during pause
+    if (ticker_thread_.joinable()) {
+        ticker_thread_.join();
+        ticker_thread_ = std::thread();
+    }
 }
 
 void GUIEngine::resume() {
@@ -91,6 +119,10 @@ void GUIEngine::resume() {
         });
         cpu_gen_->start();
     }
+    // Restart stats ticker if it was joined during pause/stop
+    if (!ticker_thread_.joinable()) {
+        ticker_thread_ = std::thread(&GUIEngine::ticker_loop, this);
+    }
 }
 
 void GUIEngine::stop() {
@@ -101,6 +133,7 @@ void GUIEngine::stop() {
     if (ticker_thread_.joinable()) {
         ticker_thread_.join();
     }
+    ticker_thread_ = std::thread(); // reset to empty
 }
 
 GUIStats GUIEngine::get_stats() const {
@@ -168,6 +201,7 @@ void GUIEngine::ticker_loop() {
     while (!stop_requested_.load()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         if (stop_requested_.load()) break;
+        if (!running_.load() || paused_.load()) continue;
         on_tick();
     }
 }
@@ -180,6 +214,99 @@ void GUIEngine::on_tick() {
             stats_cb_(s);
         }
     }
+}
+
+// ============================================================================
+// Export
+// ============================================================================
+
+static std::string format_timestamp(std::chrono::steady_clock::time_point tp) {
+    auto now = std::chrono::system_clock::now();
+    auto tp_sys = std::chrono::system_clock::time_point(
+        std::chrono::duration_cast<std::chrono::system_clock::duration>(
+            tp.time_since_epoch()));
+    auto t = std::chrono::system_clock::to_time_t(tp_sys);
+    std::tm tm_buf{};
+#if defined(_WIN32)
+    localtime_s(&tm_buf, &t);
+#else
+    localtime_r(&t, &tm_buf);
+#endif
+    std::ostringstream oss;
+    oss << std::put_time(&tm_buf, "%Y-%m-%d %H:%M:%S");
+    return oss.str();
+}
+
+bool GUIEngine::export_matches(const std::string& filepath,
+                                ExportFormat format,
+                                const std::string& passphrase,
+                                std::string& error_out) {
+    error_out.clear();
+    if (passphrase.empty()) {
+        error_out = "密码不能为空";
+        return false;
+    }
+
+    std::vector<GUIMatchResult> matches;
+    {
+        std::lock_guard<std::mutex> lock(matches_mutex_);
+        matches = matches_;
+    }
+
+    if (matches.empty()) {
+        error_out = "没有可导出的结果";
+        return false;
+    }
+
+    std::ofstream ofs(filepath);
+    if (!ofs.is_open()) {
+        error_out = "无法打开文件: " + filepath;
+        return false;
+    }
+
+    try {
+        if (format == ExportFormat::CSV) {
+            // CSV header
+            ofs << "address,pattern_matched,attempts,timestamp,encrypted_private_key\n";
+            for (const auto& m : matches) {
+                std::string plaintext = m.address + "," +
+                                        m.private_key_hex + "," +
+                                        m.pattern_matched + "," +
+                                        std::to_string(m.attempts);
+                std::string encrypted = encrypt_export_record(plaintext, passphrase);
+                ofs << m.address << ","
+                    << m.pattern_matched << ","
+                    << m.attempts << ","
+                    << format_timestamp(m.timestamp) << ","
+                    << encrypted << "\n";
+            }
+        } else { // JSON
+            ofs << "[\n";
+            for (size_t i = 0; i < matches.size(); ++i) {
+                const auto& m = matches[i];
+                std::string plaintext = m.address + "," +
+                                        m.private_key_hex + "," +
+                                        m.pattern_matched + "," +
+                                        std::to_string(m.attempts);
+                std::string encrypted = encrypt_export_record(plaintext, passphrase);
+                ofs << "  {\n"
+                    << "    \"address\": \"" << m.address << "\",\n"
+                    << "    \"pattern_matched\": \"" << m.pattern_matched << "\",\n"
+                    << "    \"attempts\": " << m.attempts << ",\n"
+                    << "    \"timestamp\": \"" << format_timestamp(m.timestamp) << "\",\n"
+                    << "    \"encrypted_private_key\": \"" << encrypted << "\"\n"
+                    << "  }";
+                if (i + 1 < matches.size()) ofs << ",";
+                ofs << "\n";
+            }
+            ofs << "]\n";
+        }
+    } catch (const std::exception& e) {
+        error_out = std::string("导出失败: ") + e.what();
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace trx

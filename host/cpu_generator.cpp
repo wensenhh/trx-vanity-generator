@@ -71,6 +71,10 @@ void CPUGenerator::stop() {
     threads_.clear();
 }
 
+bool CPUGenerator::is_running() const {
+    return running_.load();
+}
+
 void CPUGenerator::worker_thread(int thread_id) {
     // Each thread has its own RNG seeded differently
     RNG local_rng(static_cast<uint64_t>(thread_id) +
@@ -124,6 +128,8 @@ void CPUGenerator::worker_thread(int thread_id) {
             }
         }
     }
+    // Ensure running_ is false when thread exits
+    running_ = false;
 }
 
 std::vector<MatchResult> CPUGenerator::get_results() {

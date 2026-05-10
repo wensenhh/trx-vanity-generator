@@ -4,6 +4,7 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Input.H>
+#include <FL/Fl_Secret_Input.H>
 #include <FL/Fl_Choice.H>
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Text_Display.H>
@@ -12,11 +13,13 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Scroll.H>
 #include <FL/fl_ask.H>
+#include <FL/Fl_Native_File_Chooser.H>
 #include <sstream>
 #include <iomanip>
 #include <chrono>
 #include <atomic>
 #include <mutex>
+#include <fstream>
 
 using namespace trx;
 
@@ -37,6 +40,7 @@ static Fl_Check_Button* g_use_gpu = nullptr;
 static Fl_Button*      g_btn_start = nullptr;
 static Fl_Button*      g_btn_pause = nullptr;
 static Fl_Button*      g_btn_stop = nullptr;
+static Fl_Button*      g_btn_export = nullptr;
 static Fl_Text_Display* g_log_display = nullptr;
 static Fl_Text_Buffer* g_log_buffer = nullptr;
 static Fl_Box*         g_stats_box = nullptr;
@@ -220,6 +224,7 @@ static void start_generation() {
     g_btn_start->deactivate();
     g_btn_pause->activate();
     g_btn_stop->activate();
+    g_btn_export->deactivate();
 }
 
 static void pause_generation() {
@@ -245,7 +250,118 @@ static void stop_generation() {
     g_btn_start->activate();
     g_btn_pause->deactivate();
     g_btn_stop->deactivate();
+    g_btn_export->activate();
     g_btn_pause->label("暂停");
+}
+
+// ============================================================================
+// Export dialog
+// ============================================================================
+
+static void show_export_dialog() {
+    if (!g_engine) {
+        fl_alert("没有运行中的引擎，无法导出");
+        return;
+    }
+
+    auto matches = g_engine->get_matches();
+    if (matches.empty()) {
+        fl_alert("没有可导出的结果");
+        return;
+    }
+
+    // Ask for format
+    int fmt_choice = fl_choice("选择导出格式", "取消", "CSV", "JSON");
+    if (fmt_choice == 0) return; // cancelled
+    GUIEngine::ExportFormat format = (fmt_choice == 1)
+        ? GUIEngine::ExportFormat::CSV
+        : GUIEngine::ExportFormat::JSON;
+
+    // File chooser
+    Fl_Native_File_Chooser chooser(Fl_Native_File_Chooser::BROWSE_SAVE_FILE);
+    chooser.title("保存导出文件");
+    if (format == GUIEngine::ExportFormat::CSV) {
+        chooser.filter("CSV Files\t*.csv\nAll Files\t*.*");
+        chooser.preset_file("trx_vanity_results.csv");
+    } else {
+        chooser.filter("JSON Files\t*.json\nAll Files\t*.*");
+        chooser.preset_file("trx_vanity_results.json");
+    }
+
+    if (chooser.show() != 0) {
+        append_log("导出已取消");
+        return;
+    }
+    std::string filepath = chooser.filename();
+
+    // Password dialog
+    Fl_Window* pwd_win = new Fl_Window(360, 140, "设置导出密码");
+    Fl_Secret_Input* pwd_input = new Fl_Secret_Input(20, 40, 320, 30, "密码:");
+    pwd_input->tooltip("此密码用于加密私钥，丢失后无法恢复");
+    Fl_Secret_Input* pwd_confirm = new Fl_Secret_Input(20, 80, 320, 30, "确认密码:");
+    Fl_Button* ok_btn = new Fl_Button(200, 105, 60, 26, "确定");
+    Fl_Button* cancel_btn = new Fl_Button(270, 105, 60, 26, "取消");
+
+    bool confirmed = false;
+    ok_btn->callback([](Fl_Widget*, void* data) {
+        *static_cast<bool*>(data) = true;
+        Fl::first_window()->hide();
+    }, &confirmed);
+    cancel_btn->callback([](Fl_Widget*, void*) {
+        Fl::first_window()->hide();
+    }, nullptr);
+
+    pwd_win->set_modal();
+    pwd_win->end();
+    pwd_win->show();
+    while (pwd_win->shown()) {
+        Fl::wait();
+    }
+
+    if (!confirmed) {
+        delete pwd_win;
+        append_log("导出已取消");
+        return;
+    }
+
+    std::string pwd = pwd_input->value() ? pwd_input->value() : "";
+    std::string pwd2 = pwd_confirm->value() ? pwd_confirm->value() : "";
+    delete pwd_win;
+
+    if (pwd.empty()) {
+        fl_alert("密码不能为空");
+        return;
+    }
+    if (pwd != pwd2) {
+        fl_alert("两次输入的密码不一致");
+        return;
+    }
+
+    // Security warning
+    int warn_ok = fl_choice(
+        "安全提示:\n"
+        "私钥将使用 AES-256-GCM 加密保存。\n"
+        "请务必牢记密码，密码丢失后私钥将无法恢复！\n"
+        "导出文件不会自动上传到任何服务。\n\n"
+        "确认继续导出？",
+        "取消", "确认导出", nullptr);
+    if (warn_ok != 1) {
+        append_log("导出已取消");
+        return;
+    }
+
+    // Perform export
+    std::string error;
+    bool ok = g_engine->export_matches(filepath, format, pwd, error);
+    if (!ok) {
+        fl_alert("导出失败: %s", error.c_str());
+        append_log(("导出失败: " + error).c_str());
+        return;
+    }
+
+    append_log(("导出成功: " + filepath).c_str());
+    fl_message("导出成功!\n文件: %s\n\n请妥善保管密码，密码丢失后私钥将无法恢复。",
+               filepath.c_str());
 }
 
 // ============================================================================
@@ -312,6 +428,10 @@ int main(int argc, char** argv) {
     g_btn_stop->callback([](Fl_Widget*, void*) { stop_generation(); });
     g_btn_stop->deactivate();
 
+    g_btn_export = new Fl_Button(610, 40, 80, 25, "导出结果");
+    g_btn_export->callback([](Fl_Widget*, void*) { show_export_dialog(); });
+    g_btn_export->deactivate();
+
     // Stats
     g_stats_box = new Fl_Box(10, 105, W - 20, 20, "准备就绪");
     g_stats_box->box(FL_THIN_DOWN_BOX);
@@ -333,6 +453,7 @@ int main(int argc, char** argv) {
 
     append_log("TRX Vanity GUI MVP 已启动");
     append_log("安全提示: 私钥默认隐藏，点击“显示私钥”需二次确认");
+    append_log("导出结果: 点击“导出结果”可将命中地址加密保存为 CSV/JSON");
     append_log("本窗口关闭时会安全停止后台任务");
 
     return Fl::run();
