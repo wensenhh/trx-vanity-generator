@@ -1,12 +1,19 @@
 # Build artifacts
 build/
-_CPack_Packages/
-*.tar.gz
+*.dmg
 *.zip
+*.tgz
+*.tar.gz
+*.exe
+# CPack / installer artifacts
+cpack_*.txt
+_CPack_Packages/
+
+# Compiled objects / libs
 *.o
 *.a
 *.so
-*.exe
+*.dylib
 
 # IDE
 .vscode/
