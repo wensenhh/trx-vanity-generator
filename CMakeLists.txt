@@ -54,6 +54,7 @@ set(UTIL_SOURCES
     utils/estimate.cpp
     utils/export_encryption.cpp
     utils/history.cpp
+    utils/config.cpp
 )
 
 set(ALL_SOURCES
@@ -203,6 +204,12 @@ if(BUILD_TESTS)
     add_test(NAME cli_cpu_sequential_smoke
         COMMAND trx_vanity sequential 1 4 --max-attempts 64 -t 1)
     set_tests_properties(cli_cpu_sequential_smoke PROPERTIES TIMEOUT 10)
+
+    add_executable(test_config tests/test_config.cpp utils/config.cpp)
+    target_include_directories(test_config PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_options(test_config PRIVATE -Wall -Wextra -O3 -march=native)
+    add_test(NAME config COMMAND test_config)
+    set_tests_properties(config PROPERTIES TIMEOUT 10)
 
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_private_key_output.cmake.in

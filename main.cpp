@@ -1,4 +1,5 @@
 #include "utils/constants.h"
+#include "utils/config.h"
 #include "utils/crypto.h"
 #include "utils/pattern.h"
 #include "utils/estimate.h"
@@ -92,7 +93,9 @@ void print_usage(const char* prog, std::ostream& os = std::cout) {
        << "  -t, --threads <n>     Number of CPU threads (default: auto)\n"
        << "  -o, --output <file>   Output file for matches; private keys are NOT written by default\n"
        << "  -v, --verbose         Show progress every second\n"
-       << "  -h, --help            Show this help\n\n"
+       << "  -h, --help            Show this help\n"
+       << "  --config <file>       Load settings from JSON config file\n"
+       << "  --save-config         Save current settings to default config file (~/.trx_vanity_config.json)\n\n"
        << "Examples:\n"
        << "  " << prog << " consecutive 8 7                 # 7 repeated 8s at the end\n"
        << "  " << prog << " consecutive 8 8                 # 8 repeated 8s at the end\n"
@@ -172,6 +175,26 @@ bool parse_nonnegative_u64(const std::string& text, uint64_t& out) {
 int main(int argc, char* argv[]) {
     print_banner();
 
+    // Config file support
+    std::string config_file;
+    bool save_config = false;
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--config") {
+            if (i + 1 < argc) config_file = argv[++i];
+        } else if (std::string(argv[i]) == "--save-config") {
+            save_config = true;
+        }
+    }
+
+    // Load config file if specified
+    trx::CLIConfig config;
+    if (!config_file.empty()) {
+        std::string error;
+        if (!trx::ConfigManager::load(config_file, config, error)) {
+            std::cerr << "Warning: failed to load config: " << error << "\n";
+        }
+    }
+
     if (argc == 2 && (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
         print_usage(argv[0]);
         return 0;
@@ -217,6 +240,17 @@ int main(int argc, char* argv[]) {
     uint64_t max_attempts = 0;
     int gpu_platform_idx = -1;
     int gpu_device_idx = -1;
+
+    // Apply config file defaults before CLI overrides
+    if (config.gpu.has_value()) use_gpu = config.gpu.value();
+    if (config.threads.has_value()) num_threads = config.threads.value();
+    if (config.batch_size.has_value()) gpu_batch_size = config.batch_size.value();
+    if (config.max_attempts.has_value()) max_attempts = config.max_attempts.value();
+    if (config.verbose.has_value()) verbose = config.verbose.value();
+    if (config.output.has_value()) output_file = config.output.value();
+    if (config.encrypted_output.has_value()) encrypted_output_file = config.encrypted_output.value();
+    if (config.export_password_env.has_value()) export_password_env = config.export_password_env.value();
+    if (config.show_private_key.has_value()) show_private_key = config.show_private_key.value();
 
     auto require_value = [&](int index, const std::string& opt) -> bool {
         if (index + 1 >= argc || looks_like_option(argv[index + 1])) {
@@ -310,6 +344,11 @@ int main(int argc, char* argv[]) {
             }
             gpu_platform_idx = static_cast<int>(platform - 1);
             gpu_device_idx = static_cast<int>(device - 1);
+        } else if (arg == "--config") {
+            // Already parsed above; skip value
+            if (i + 1 < argc && !looks_like_option(argv[i + 1])) ++i;
+        } else if (arg == "--save-config") {
+            // Already parsed above; no action needed
         } else if (i == 3 && (pattern_type == "consecutive" || pattern_type == "sequential")) {
             pattern_arg2 = arg;
         } else {
@@ -709,6 +748,28 @@ int main(int argc, char* argv[]) {
         }
     }
 #endif
+
+    // Save config if requested
+    if (save_config) {
+        std::string save_path = config_file.empty() ? trx::ConfigManager::default_config_path() : config_file;
+        trx::CLIConfig save_config;
+        save_config.gpu = use_gpu;
+        save_config.threads = num_threads;
+        save_config.batch_size = gpu_batch_size;
+        save_config.max_attempts = max_attempts;
+        save_config.verbose = verbose;
+        save_config.show_private_key = show_private_key;
+        if (!output_file.empty()) save_config.output = output_file;
+        if (!encrypted_output_file.empty()) save_config.encrypted_output = encrypted_output_file;
+        if (!export_password_env.empty()) save_config.export_password_env = export_password_env;
+
+        std::string error;
+        if (trx::ConfigManager::save(save_path, save_config, error)) {
+            std::cout << "\nConfig saved to: " << save_path << "\n";
+        } else {
+            std::cerr << "\nWarning: failed to save config: " << error << "\n";
+        }
+    }
 
     std::cout << "═══════════════════════════════════════════════════════════════\n";
 
