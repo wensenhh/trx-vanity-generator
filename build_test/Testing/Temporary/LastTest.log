@@ -1,0 +1,916 @@
+Start testing: May 10 17:18 +08
+----------------------------------------------------------
+1/12 Testing: estimate_difficulty
+1/12 Test: estimate_difficulty
+Command: "/Users/vincen/Vincen/code/trx_addr/build_test/test_estimate"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"estimate_difficulty" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+estimate tests passed
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"estimate_difficulty" end time: May 10 17:18 +08
+"estimate_difficulty" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/12 Testing: export_encryption
+2/12 Test: export_encryption
+Command: "/Users/vincen/Vincen/code/trx_addr/build_test/test_export_encryption"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"export_encryption" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.08 sec
+----------------------------------------------------------
+Test Passed.
+"export_encryption" end time: May 10 17:18 +08
+"export_encryption" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/12 Testing: history
+3/12 Test: history
+Command: "/Users/vincen/Vincen/code/trx_addr/build_test/test_history"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"history" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+[HISTORY_TEST] Starting history tests...
+[HISTORY_TEST] Default path: /Users/vincen/.hermes/profiles/project_manager/home/.trx_vanity/history.json
+[HISTORY_TEST] Empty load OK
+[HISTORY_TEST] Add and save OK
+[HISTORY_TEST] Load and verify OK
+[HISTORY_TEST] Multiple entries OK
+[HISTORY_TEST] Clear OK
+[HISTORY_TEST] Empty passphrase rejection OK
+[HISTORY_TEST] Empty address rejection OK
+[HISTORY_TEST] Delete entry OK
+[HISTORY_TEST] Encrypted private key roundtrip OK
+[HISTORY_TEST] Wrong passphrase rejection OK
+[HISTORY_TEST] JSON format OK
+[HISTORY_TEST] === ALL TESTS PASSED ===
+<end of output>
+Test time =   0.18 sec
+----------------------------------------------------------
+Test Passed.
+"history" end time: May 10 17:18 +08
+"history" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/12 Testing: cli_cpu_smoke
+4/12 Test: cli_cpu_smoke
+Command: "/Users/vincen/Vincen/code/trx_addr/build_test/trx_vanity" "contains" "T" "--max-attempts" "64" "-t" "1"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"cli_cpu_smoke" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+
+╔══════════════════════════════════════════════════════════════╗
+║           TRON (TRX) Vanity Address Generator                  ║
+║                    GPU Accelerated                             ║
+╠══════════════════════════════════════════════════════════════╣
+║          Full GPU ECC + Base58 Filter (OpenCL)              ║
+╚══════════════════════════════════════════════════════════════╝
+
+Pattern: Contains: T
+Estimate: difficulty=simple, avg attempts≈1.00, per-attempt probability≈1.000e+00. Probability is an average estimate and is not guaranteed.
+Mode:    CPU
+Threads: 1
+Output:  stdout
+
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TWwD1oQuzAJGSt9hMm9ARw82zGzrT9eL3w            ║
+║  Rule:       matched                                       ║
+║  Attempts:   0                                             ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TG1ptPPKtTK4JyKQYQj85d7PUd1Dh5c8xM            ║
+║  Rule:       matched                                       ║
+║  Attempts:   1                                             ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TKMMa8MVYHXseeM82DfDMJih6GRqfnu5gv            ║
+║  Rule:       matched                                       ║
+║  Attempts:   2                                             ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TW7ajHaBuCp74sULopLxbo9SRXmyrhak42            ║
+║  Rule:       matched                                       ║
+║  Attempts:   3                                             ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TPSkgDEDRi1UBFYbyxxUbMbEp4yD1c4Ckn            ║
+║  Rule:       matched                                       ║
+║  Attempts:   4                                             ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TEh6rKwaXHZZ6GzJYJNVdYg8DGZaMTB1jQ            ║
+║  Rule:       matched                                       ║
+║  Attempts:   5                                             ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    THNYr6P25wW5D8sC4xMS2gQVtokuAYaEwj            ║
+║  Rule:       matched                                       ║
+║  Attempts:   6                                             ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TWgYhBeByxHuGkCdvr4o28Yid7vk3Wkhpa            ║
+║  Rule:       matched                                       ║
+║  Attempts:   7                                             ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TYkyS7PUqfxi9ZL7oJczkWmcNjxxsD87T3            ║
+║  Rule:       matched                                       ║
+║  Attempts:   8                                             ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TQ31GfskF2DJHrSpnpYiXaZNAmfVBvqFto            ║
+║  Rule:       matched                                       ║
+║  Attempts:   9                                             ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TPZsYKmHr5JW4HJENiiFugahrUwqu8s764            ║
+║  Rule:       matched                                       ║
+║  Attempts:   10                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TJRaXwWqgAGqzrwm8dCs9RXpqkjfJWBdEP            ║
+║  Rule:       matched                                       ║
+║  Attempts:   11                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TDAa7Yh7k17XUdH2WM8iUH6tYTk73rMHFx            ║
+║  Rule:       matched                                       ║
+║  Attempts:   12                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TNSzt5fSogFHjFktvmxgSXQgrcKpt566Sh            ║
+║  Rule:       matched                                       ║
+║  Attempts:   13                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TJwwXo2koaMdBux12pfAUNkTyFRiHQdM8c            ║
+║  Rule:       matched                                       ║
+║  Attempts:   14                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TF3sPhzeeZCgU8fJykKZ1wg7CZgrnBonw5            ║
+║  Rule:       matched                                       ║
+║  Attempts:   15                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TCGBptkWxqJGdDp7iEbnrm76RMfcrBKR9c            ║
+║  Rule:       matched                                       ║
+║  Attempts:   16                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TDmSdfcRzzC1YctQrAM3HmKx2KcRgD8d3G            ║
+║  Rule:       matched                                       ║
+║  Attempts:   17                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TLHrU3brz5d8iSQe2hH73vT5UfRg4zwXFt            ║
+║  Rule:       matched                                       ║
+║  Attempts:   18                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TQfEDpYz5efbzsZa5SMc7jSifBQZTgXG5J            ║
+║  Rule:       matched                                       ║
+║  Attempts:   19                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TNuLHAt6ixtggsVoTcqj4Rf8zdgxdaMpCU            ║
+║  Rule:       matched                                       ║
+║  Attempts:   20                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TYuhHCgLB2gXnoP6BcFSAWCzp8H936bqxH            ║
+║  Rule:       matched                                       ║
+║  Attempts:   21                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TG6tkZd5N5iC4qMERoAtEoiusLZtf7xanc            ║
+║  Rule:       matched                                       ║
+║  Attempts:   22                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TQMubyzbJpt31iepnLjuyEuh6JChWTPGDK            ║
+║  Rule:       matched                                       ║
+║  Attempts:   23                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TB3kdNPH81HFoTHytZYkbbJhSvJQPu7F6H            ║
+║  Rule:       matched                                       ║
+║  Attempts:   24                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TMfbvR2QVSVXvSvxih7xttDGiw1eUAs1np            ║
+║  Rule:       matched                                       ║
+║  Attempts:   25                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TLs4uyFHKJrkRRXPqUgDeneTnDQ4VaScCE            ║
+║  Rule:       matched                                       ║
+║  Attempts:   26                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TR9ExGyAJiNFFHFJDfPtQN32TYm5k8bd86            ║
+║  Rule:       matched                                       ║
+║  Attempts:   27                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TH3DWkCh7dtgJHsg3LQ7PmSXupUC1MtVni            ║
+║  Rule:       matched                                       ║
+║  Attempts:   28                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TMetUHTDYUHG7dBKf3M8Z3GxvtEcduxsEV            ║
+║  Rule:       matched                                       ║
+║  Attempts:   29                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TNaumaEMVfZF4ZAUEdP2Mwabow1kS7ZebM            ║
+║  Rule:       matched                                       ║
+║  Attempts:   30                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    THYfExk79NEMe5BpCFXvyJNYyHhZdLfYHu            ║
+║  Rule:       matched                                       ║
+║  Attempts:   31                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TXw7hCpijGQ8aLnwp5jmpnxYD6KACsCdHm            ║
+║  Rule:       matched                                       ║
+║  Attempts:   32                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TRTK3hQogfNkXwZ7aCKHS8RFZyEpVhRXrW            ║
+║  Rule:       matched                                       ║
+║  Attempts:   33                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TQrit5Dk5BZgFGb6T3kJJLcQtTcoU9Qb2K            ║
+║  Rule:       matched                                       ║
+║  Attempts:   34                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TJPw7tAK6FWRKghweGrQ93PJw5px25pNWv            ║
+║  Rule:       matched                                       ║
+║  Attempts:   35                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TVLfDCHKMafpVPPf9QrX4hS5eSPHdjHAr2            ║
+║  Rule:       matched                                       ║
+║  Attempts:   36                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TAq4CfwG8TsPFZBJDZseMeiuaYiJe1P5JV            ║
+║  Rule:       matched                                       ║
+║  Attempts:   37                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TLCFLKXZeD5ZHp4AQw8yeDG4kjtpVYnuMm            ║
+║  Rule:       matched                                       ║
+║  Attempts:   38                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TGBFnA3qUN2HXzBzpcHW4d8xVGU5Ya8QEL            ║
+║  Rule:       matched                                       ║
+║  Attempts:   39                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TVj1LuSLpAjeWmeepo9LL89RrZceoe2e1M            ║
+║  Rule:       matched                                       ║
+║  Attempts:   40                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TSNNTYZoDfDrnPLxaP4uF9W92dk1qEAkFZ            ║
+║  Rule:       matched                                       ║
+║  Attempts:   41                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TYZ5Zmrt7QboaVdamghxPY9n96N7vfVvoe            ║
+║  Rule:       matched                                       ║
+║  Attempts:   42                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TSxKHCukVyT5ZaQKCVEdiTt8Upd8V9yko1            ║
+║  Rule:       matched                                       ║
+║  Attempts:   43                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TKMzGqidHEDMkqxaUv6kN1kunUezGh27Qk            ║
+║  Rule:       matched                                       ║
+║  Attempts:   44                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TAJwR1Ni3g2Be8wzMjgFstwY8m1j7rn33K            ║
+║  Rule:       matched                                       ║
+║  Attempts:   45                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TENpuCD6Yzhsq88uvoB8LN6Cz8QxLwd8dU            ║
+║  Rule:       matched                                       ║
+║  Attempts:   46                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TTAuexYQxjPXE8JvbCDPHZJPuas2Kpw54P            ║
+║  Rule:       matched                                       ║
+║  Attempts:   47                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TJxPs6WzHTqEiNFghF5n3QCwLucfKfxkgo            ║
+║  Rule:       matched                                       ║
+║  Attempts:   48                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TFoX2QuaLwBB8W8q9NQMJx9eWBgeyAh3Uk            ║
+║  Rule:       matched                                       ║
+║  Attempts:   49                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TDKn56mtFzBjG374rsCEzcmd6ShUYfVxgp            ║
+║  Rule:       matched                                       ║
+║  Attempts:   50                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TJUYoH9T8DEKGw4yvDR2sLbjfgBnyLvXJZ            ║
+║  Rule:       matched                                       ║
+║  Attempts:   51                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TLed1CtAhpE9C5mUUpa7yBLL5vjrRCcQez            ║
+║  Rule:       matched                                       ║
+║  Attempts:   52                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TQQGPvzzJx5f8X6RUSunfDw9joVwTycisU            ║
+║  Rule:       matched                                       ║
+║  Attempts:   53                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TYbEd29y4G99dLiHceqUquGAoASZRkAd6H            ║
+║  Rule:       matched                                       ║
+║  Attempts:   54                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TZDZGoox7YuVPpkQXL1kkCdQv3EvKx2ZBD            ║
+║  Rule:       matched                                       ║
+║  Attempts:   55                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TKBxy7j9AtM7scRTxaWcSgDwmstWuJbuML            ║
+║  Rule:       matched                                       ║
+║  Attempts:   56                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TYZ7usUXdAQW8nTnvsKk4BLJDjfXddvSXA            ║
+║  Rule:       matched                                       ║
+║  Attempts:   57                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TDXWcvpStJaJtd3zUQXNAskp9oHVp6pVUS            ║
+║  Rule:       matched                                       ║
+║  Attempts:   58                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TVXLvvpYUEjK3e3gi6sEbuVP7QynwQ5gif            ║
+║  Rule:       matched                                       ║
+║  Attempts:   59                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TYjFMb3SXtcjccRCRPLoXU2JXrqBvaFv42            ║
+║  Rule:       matched                                       ║
+║  Attempts:   60                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TFDJib7RrysRRxWHPaZHrAZKzHJt3FaEgq            ║
+║  Rule:       matched                                       ║
+║  Attempts:   61                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TEGyfLPHDXcNei5zzst8vZu2mP4SsDoDj4            ║
+║  Rule:       matched                                       ║
+║  Attempts:   62                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════╗
+║  🎯 MATCH FOUND!                                             ║
+╠══════════════════════════════════════════════════════════════╣
+║  Address:    TDWZmuDdmdTiqt6DSPC66cniPhVsZKBzCw            ║
+║  Rule:       matched                                       ║
+║  Attempts:   63                                            ║
+║  Security: private key hidden by default.             ║
+╚══════════════════════════════════════════════════════════════╝
+
+
+═══════════════════════════════════════════════════════════════
+Generation Complete
+Total Attempts: 64
+Total Time:     0.11s
+Average Rate:   563 addr/s
+Matches Found:  64
+═══════════════════════════════════════════════════════════════
+<end of output>
+Test time =   0.12 sec
+----------------------------------------------------------
+Test Passed.
+"cli_cpu_smoke" end time: May 10 17:18 +08
+"cli_cpu_smoke" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/12 Testing: cli_cpu_suffix_smoke
+5/12 Test: cli_cpu_suffix_smoke
+Command: "/Users/vincen/Vincen/code/trx_addr/build_test/trx_vanity" "suffix" "8888" "--max-attempts" "64" "-t" "1"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"cli_cpu_suffix_smoke" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+
+╔══════════════════════════════════════════════════════════════╗
+║           TRON (TRX) Vanity Address Generator                  ║
+║                    GPU Accelerated                             ║
+╠══════════════════════════════════════════════════════════════╣
+║          Full GPU ECC + Base58 Filter (OpenCL)              ║
+╚══════════════════════════════════════════════════════════════╝
+
+Pattern: Suffix: 8888
+Estimate: difficulty=hard, avg attempts≈11316496, per-attempt probability≈8.837e-08. Probability is an average estimate and is not guaranteed.
+Mode:    CPU
+Threads: 1
+Output:  stdout
+
+
+
+═══════════════════════════════════════════════════════════════
+Generation Complete
+Total Attempts: 64
+Total Time:     0.25s
+Average Rate:   256 addr/s
+Matches Found:  0
+═══════════════════════════════════════════════════════════════
+<end of output>
+Test time =   0.26 sec
+----------------------------------------------------------
+Test Passed.
+"cli_cpu_suffix_smoke" end time: May 10 17:18 +08
+"cli_cpu_suffix_smoke" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/12 Testing: cli_cpu_prefix_smoke
+6/12 Test: cli_cpu_prefix_smoke
+Command: "/Users/vincen/Vincen/code/trx_addr/build_test/trx_vanity" "prefix" "ABC" "--max-attempts" "64" "-t" "1"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"cli_cpu_prefix_smoke" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+
+╔══════════════════════════════════════════════════════════════╗
+║           TRON (TRX) Vanity Address Generator                  ║
+║                    GPU Accelerated                             ║
+╠══════════════════════════════════════════════════════════════╣
+║          Full GPU ECC + Base58 Filter (OpenCL)              ║
+╚══════════════════════════════════════════════════════════════╝
+
+Pattern: Prefix (after T): ABC
+Estimate: difficulty=moderate, avg attempts≈195112, per-attempt probability≈5.125e-06. Probability is an average estimate and is not guaranteed.
+Mode:    CPU
+Threads: 1
+Output:  stdout
+
+
+
+═══════════════════════════════════════════════════════════════
+Generation Complete
+Total Attempts: 64
+Total Time:     0.11s
+Average Rate:   583 addr/s
+Matches Found:  0
+═══════════════════════════════════════════════════════════════
+<end of output>
+Test time =   0.12 sec
+----------------------------------------------------------
+Test Passed.
+"cli_cpu_prefix_smoke" end time: May 10 17:18 +08
+"cli_cpu_prefix_smoke" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/12 Testing: cli_cpu_consecutive_smoke
+7/12 Test: cli_cpu_consecutive_smoke
+Command: "/Users/vincen/Vincen/code/trx_addr/build_test/trx_vanity" "consecutive" "8" "4" "--max-attempts" "64" "-t" "1"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"cli_cpu_consecutive_smoke" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+
+╔══════════════════════════════════════════════════════════════╗
+║           TRON (TRX) Vanity Address Generator                  ║
+║                    GPU Accelerated                             ║
+╠══════════════════════════════════════════════════════════════╣
+║          Full GPU ECC + Base58 Filter (OpenCL)              ║
+╚══════════════════════════════════════════════════════════════╝
+
+Pattern: 4 consecutive 8s at end
+Estimate: difficulty=hard, avg attempts≈11316496, per-attempt probability≈8.837e-08. Probability is an average estimate and is not guaranteed.
+Mode:    CPU
+Threads: 1
+Output:  stdout
+
+
+
+═══════════════════════════════════════════════════════════════
+Generation Complete
+Total Attempts: 64
+Total Time:     0.23s
+Average Rate:   281 addr/s
+Matches Found:  0
+═══════════════════════════════════════════════════════════════
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Passed.
+"cli_cpu_consecutive_smoke" end time: May 10 17:18 +08
+"cli_cpu_consecutive_smoke" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/12 Testing: cli_cpu_sequential_smoke
+8/12 Test: cli_cpu_sequential_smoke
+Command: "/Users/vincen/Vincen/code/trx_addr/build_test/trx_vanity" "sequential" "1" "4" "--max-attempts" "64" "-t" "1"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"cli_cpu_sequential_smoke" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+
+╔══════════════════════════════════════════════════════════════╗
+║           TRON (TRX) Vanity Address Generator                  ║
+║                    GPU Accelerated                             ║
+╠══════════════════════════════════════════════════════════════╣
+║          Full GPU ECC + Base58 Filter (OpenCL)              ║
+╚══════════════════════════════════════════════════════════════╝
+
+Pattern: 4-digit sequential ascending starting from 1
+Estimate: difficulty=hard, avg attempts≈11316496, per-attempt probability≈8.837e-08. Probability is an average estimate and is not guaranteed.
+Mode:    CPU
+Threads: 1
+Output:  stdout
+
+
+
+═══════════════════════════════════════════════════════════════
+Generation Complete
+Total Attempts: 64
+Total Time:     0.24s
+Average Rate:   270 addr/s
+Matches Found:  0
+═══════════════════════════════════════════════════════════════
+<end of output>
+Test time =   0.25 sec
+----------------------------------------------------------
+Test Passed.
+"cli_cpu_sequential_smoke" end time: May 10 17:18 +08
+"cli_cpu_sequential_smoke" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/12 Testing: cli_private_key_output_security
+9/12 Test: cli_private_key_output_security
+Command: "/opt/homebrew/bin/cmake" "-P" "/Users/vincen/Vincen/code/trx_addr/build_test/cli_private_key_output.cmake"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"cli_private_key_output_security" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.36 sec
+----------------------------------------------------------
+Test Passed.
+"cli_private_key_output_security" end time: May 10 17:18 +08
+"cli_private_key_output_security" time elapsed: 00:00:01
+----------------------------------------------------------
+
+10/12 Testing: cli_argument_validation
+10/12 Test: cli_argument_validation
+Command: "/opt/homebrew/bin/cmake" "-P" "/Users/vincen/Vincen/code/trx_addr/build_test/cli_argument_validation.cmake"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"cli_argument_validation" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.33 sec
+----------------------------------------------------------
+Test Passed.
+"cli_argument_validation" end time: May 10 17:18 +08
+"cli_argument_validation" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/12 Testing: install_package_content_smoke
+11/12 Test: install_package_content_smoke
+Command: "/opt/homebrew/bin/cmake" "-P" "/Users/vincen/Vincen/code/trx_addr/build_test/install_content_smoke.cmake"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"install_package_content_smoke" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+-- Install configuration: ""
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/bin/trx_vanity
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/./README.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/USER_GUIDE_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/SECURITY_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/WEBSITE_COPY_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/PACKAGING_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/RELEASE_CHECKLIST_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/RELEASE_FEEDBACK_TEMPLATE_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/macos/README_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/macos/sign_and_notarize_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/./TRX Vanity.app
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/./TRX Vanity.app/Contents
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/./TRX Vanity.app/Contents/MacOS
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/./TRX Vanity.app/Contents/MacOS/TRX Vanity
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/./TRX Vanity.app/Contents/Info.plist
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/bin/trx_vanity
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/README.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/README_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/sign_and_notarize_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/USER_GUIDE_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/SECURITY_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/WEBSITE_COPY_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/PACKAGING_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/RELEASE_CHECKLIST_zh.md
+-- Installing: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/RELEASE_FEEDBACK_TEMPLATE_zh.md
+-- Install/package content smoke passed: /Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"install_package_content_smoke" end time: May 10 17:18 +08
+"install_package_content_smoke" time elapsed: 00:00:00
+----------------------------------------------------------
+
+12/12 Testing: macos_packaging_files_smoke
+12/12 Test: macos_packaging_files_smoke
+Command: "/opt/homebrew/bin/cmake" "-P" "/Users/vincen/Vincen/code/trx_addr/build_test/macos_packaging_files_smoke.cmake"
+Directory: /Users/vincen/Vincen/code/trx_addr/build_test
+"macos_packaging_files_smoke" start time: May 10 17:18 +08
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"macos_packaging_files_smoke" end time: May 10 17:18 +08
+"macos_packaging_files_smoke" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: May 10 17:18 +08

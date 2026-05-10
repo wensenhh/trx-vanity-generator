@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <thread>
 #include <chrono>
+#include <algorithm>
 
 namespace trx {
 
@@ -370,6 +371,114 @@ bool GUIEngine::export_matches(const std::string& filepath,
     }
 
     return true;
+}
+
+// ============================================================================
+// History
+// ============================================================================
+
+bool GUIEngine::save_history(const std::string& passphrase,
+                              const std::string& filepath,
+                              std::string& error_out) {
+    error_out.clear();
+    if (passphrase.empty()) {
+        error_out = "密码不能为空";
+        return false;
+    }
+
+    std::vector<GUIMatchResult> matches;
+    {
+        std::lock_guard<std::mutex> lock(matches_mutex_);
+        matches = matches_;
+    }
+
+    if (matches.empty()) {
+        error_out = "没有可保存的结果";
+        return false;
+    }
+
+    std::string pt_str = get_pattern_type_str();
+    std::string p1 = get_pattern_param1();
+    std::string p2 = get_pattern_param2();
+
+    for (const auto& m : matches) {
+        HistoryEntry entry;
+        entry.address = m.address;
+        entry.pattern_matched = m.pattern_matched;
+        entry.pattern_type = pt_str;
+        entry.pattern_param1 = p1;
+        entry.pattern_param2 = p2;
+        entry.attempts = m.attempts;
+        entry.timestamp = std::chrono::system_clock::now();
+
+        // Encrypt private key using same format as export
+        std::string plaintext = m.address + "," +
+                                m.private_key_hex + "," +
+                                m.pattern_matched + "," +
+                                std::to_string(m.attempts);
+        try {
+            entry.encrypted_private_key = encrypt_export_record(plaintext, passphrase);
+        } catch (const std::exception& e) {
+            error_out = std::string("加密失败: ") + e.what();
+            return false;
+        }
+
+        std::string add_err;
+        if (!history_mgr_.add_entry(entry, passphrase, add_err)) {
+            error_out = add_err;
+            return false;
+        }
+    }
+
+    if (!history_mgr_.save(filepath.empty() ? HistoryManager::default_history_path() : filepath)) {
+        error_out = "保存历史记录文件失败";
+        return false;
+    }
+    return true;
+}
+
+bool GUIEngine::load_history(const std::string& passphrase,
+                              const std::string& filepath,
+                              std::string& error_out) {
+    error_out.clear();
+    if (passphrase.empty()) {
+        error_out = "密码不能为空";
+        return false;
+    }
+
+    std::string path = filepath.empty() ? HistoryManager::default_history_path() : filepath;
+    if (!history_mgr_.load(path)) {
+        error_out = "加载历史记录文件失败";
+        return false;
+    }
+    return true;
+}
+
+std::vector<HistoryEntry> GUIEngine::get_history_entries() const {
+    return history_mgr_.get_entries();
+}
+
+void GUIEngine::clear_history() {
+    history_mgr_.clear();
+}
+
+std::string GUIEngine::get_pattern_type_str() const {
+    switch (pattern_type_) {
+        case PatternType::SUFFIX_CUSTOM: return "suffix";
+        case PatternType::PREFIX_CUSTOM: return "prefix";
+        case PatternType::CONTAINS: return "contains";
+        case PatternType::SUFFIX_CONSECUTIVE: return "consecutive";
+        case PatternType::SUFFIX_SEQUENTIAL: return "sequential";
+    }
+    return "unknown";
+}
+
+std::string GUIEngine::get_pattern_param1() const {
+    return pattern_param1_;
+}
+
+std::string GUIEngine::get_pattern_param2() const {
+    return pattern_param2_;
 }
 
 } // namespace trx

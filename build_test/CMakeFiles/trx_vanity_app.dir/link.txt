@@ -1,0 +1,1 @@
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/trx_vanity_app.dir/packaging/macos/trx_vanity_app.cpp.o -o "TRX Vanity.app/Contents/MacOS/TRX Vanity"

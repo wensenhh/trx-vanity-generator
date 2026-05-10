@@ -1,0 +1,1 @@
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/test_history.dir/tests/test_history.cpp.o CMakeFiles/test_history.dir/utils/history.cpp.o CMakeFiles/test_history.dir/utils/export_encryption.cpp.o -o test_history  /opt/homebrew/lib/libcrypto.dylib

@@ -53,6 +53,7 @@ set(UTIL_SOURCES
     utils/rng.cpp
     utils/estimate.cpp
     utils/export_encryption.cpp
+    utils/history.cpp
 )
 
 set(ALL_SOURCES
@@ -157,6 +158,12 @@ if(BUILD_TESTS)
     target_include_directories(test_export_encryption PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_compile_options(test_export_encryption PRIVATE -Wall -Wextra -O3 -march=native)
     add_test(NAME export_encryption COMMAND test_export_encryption)
+
+    add_executable(test_history tests/test_history.cpp utils/history.cpp utils/export_encryption.cpp)
+    target_link_libraries(test_history OpenSSL::Crypto)
+    target_include_directories(test_history PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_options(test_history PRIVATE -Wall -Wextra -O3 -march=native)
+    add_test(NAME history COMMAND test_history)
 
     if(TARGET test_ecc)
         add_test(NAME ecc_correctness COMMAND test_ecc)

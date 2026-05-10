@@ -479,6 +479,7 @@ int main(int argc, char* argv[]) {
 
     // Setup generator
     std::unique_ptr<CPUGenerator> cpu_generator;
+#ifdef USE_OPENCL
     std::unique_ptr<GPUGenerator> gpu_generator;
 
     if (use_gpu) {
@@ -509,6 +510,13 @@ int main(int argc, char* argv[]) {
         cpu_generator->set_batch_size(1000);
         cpu_generator->set_max_attempts(max_attempts);
     }
+#else
+    cpu_generator = std::make_unique<CPUGenerator>();
+    cpu_generator->set_pattern(std::move(pattern));
+    cpu_generator->set_num_threads(num_threads);
+    cpu_generator->set_batch_size(1000);
+    cpu_generator->set_max_attempts(max_attempts);
+#endif
 
     // Setup result callback
     std::ofstream out_file;
@@ -561,21 +569,29 @@ int main(int argc, char* argv[]) {
         }
     };
 
+#ifdef USE_OPENCL
     if (use_gpu) {
         gpu_generator->set_callback(result_callback);
     } else {
         cpu_generator->set_callback(result_callback);
     }
+#else
+    cpu_generator->set_callback(result_callback);
+#endif
 
     // Start generation
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
+#ifdef USE_OPENCL
     if (use_gpu) {
         gpu_generator->start();
     } else {
         cpu_generator->start();
     }
+#else
+    cpu_generator->start();
+#endif
 
     auto start = std::chrono::steady_clock::now();
     auto last_update = start;
@@ -584,17 +600,29 @@ int main(int argc, char* argv[]) {
     while (g_running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+#ifdef USE_OPENCL
         bool is_running = use_gpu ? gpu_generator->is_running() : cpu_generator->is_running();
+#else
+        bool is_running = cpu_generator->is_running();
+#endif
         if (!is_running) break;
 
         auto now = std::chrono::steady_clock::now();
         if (verbose && std::chrono::duration<double>(now - last_update).count() >= 1.0) {
+#ifdef USE_OPENCL
             uint64_t attempts = use_gpu ? gpu_generator->get_total_attempts() : cpu_generator->get_total_attempts();
+#else
+            uint64_t attempts = cpu_generator->get_total_attempts();
+#endif
             double elapsed = std::chrono::duration<double>(now - start).count();
             double rate = (attempts - last_attempts) /
                           std::chrono::duration<double>(now - last_update).count();
             double avg_rate = attempts / elapsed;
+#ifdef USE_OPENCL
             size_t matches = use_gpu ? gpu_generator->get_results().size() : cpu_generator->get_results().size();
+#else
+            size_t matches = cpu_generator->get_results().size();
+#endif
 
             RuntimeEstimate runtime_estimate = estimate_runtime(pattern_estimate, avg_rate, attempts);
             std::cout << "\r[ " << std::fixed << std::setprecision(1) << elapsed << "s ] "
@@ -611,6 +639,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+#ifdef USE_OPENCL
     if (use_gpu) {
         gpu_generator->stop();
     } else {
@@ -621,6 +650,14 @@ int main(int argc, char* argv[]) {
     double total_elapsed = std::chrono::duration<double>(end - start).count();
     uint64_t total_attempts = use_gpu ? gpu_generator->get_total_attempts() : cpu_generator->get_total_attempts();
     size_t total_matches = use_gpu ? gpu_generator->get_results().size() : cpu_generator->get_results().size();
+#else
+    cpu_generator->stop();
+
+    auto end = std::chrono::steady_clock::now();
+    double total_elapsed = std::chrono::duration<double>(end - start).count();
+    uint64_t total_attempts = cpu_generator->get_total_attempts();
+    size_t total_matches = cpu_generator->get_results().size();
+#endif
 
     std::cout << "\n\n═══════════════════════════════════════════════════════════════\n";
     std::cout << "Generation Complete\n";
@@ -629,6 +666,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Average Rate:   " << std::setprecision(0) << (total_attempts / total_elapsed) << " addr/s\n";
     std::cout << "Matches Found:  " << total_matches << "\n";
 
+#ifdef USE_OPENCL
     if (use_gpu && (gpu_profile || benchmark_json)) {
         GPUProfileStats stats = gpu_generator->get_profile_stats();
         if (gpu_profile) {
@@ -665,11 +703,12 @@ int main(int argc, char* argv[]) {
                  << "\"avg_kernel_ms\":" << stats.avg(stats.kernel_ms) << ","
                  << "\"avg_count_read_ms\":" << stats.avg(stats.count_read_ms) << ","
                  << "\"avg_result_read_ms\":" << stats.avg(stats.result_read_ms) << ","
-                 << "\"avg_host_process_ms\":" << stats.avg(stats.host_process_ms)
+                 << "\"avg_host_process_ms\":\"" << stats.avg(stats.host_process_ms)
                  << "}";
             std::cout << "\nBENCHMARK_JSON " << json.str() << "\n";
         }
     }
+#endif
 
     std::cout << "═══════════════════════════════════════════════════════════════\n";
 

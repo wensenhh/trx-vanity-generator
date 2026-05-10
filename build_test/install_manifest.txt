@@ -1,0 +1,22 @@
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/bin/trx_vanity
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/./README.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/USER_GUIDE_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/SECURITY_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/WEBSITE_COPY_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/PACKAGING_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/RELEASE_CHECKLIST_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/RELEASE_FEEDBACK_TEMPLATE_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/macos/README_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/share/trx_vanity/docs/macos/sign_and_notarize_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/./TRX Vanity.app/Contents/MacOS/TRX Vanity
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/./TRX Vanity.app/Contents/Info.plist
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/bin/trx_vanity
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/README.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/README_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/sign_and_notarize_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/USER_GUIDE_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/SECURITY_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/WEBSITE_COPY_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/PACKAGING_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/RELEASE_CHECKLIST_zh.md
+/Users/vincen/Vincen/code/trx_addr/build_test/install-content-smoke/TRX Vanity.app/Contents/Resources/docs/RELEASE_FEEDBACK_TEMPLATE_zh.md
