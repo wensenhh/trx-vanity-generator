@@ -57,6 +57,13 @@ public:
     void set_batch_size(size_t size);   // GPU batch size
     void set_max_attempts(uint64_t max); // 0 = unlimited
 
+    // Performance settings (CPU adaptive tuning)
+    void set_cpu_adaptive_batch(bool enabled);
+    void set_cpu_adaptive_threads(bool enabled);
+    bool cpu_adaptive_batch() const;
+    bool cpu_adaptive_threads() const;
+    void apply_cpu_auto_tune(); // one-shot apply optimal CPU settings
+
     // Control
     void start();
     void pause();   // keeps threads alive but stops generating
@@ -134,6 +141,10 @@ private:
     uint64_t max_attempts_{0}; // 0 = unlimited
     size_t num_threads_{0};    // 0 = use default
     size_t batch_size_{0};     // 0 = use default
+
+    // CPU adaptive tuning
+    bool cpu_adaptive_batch_{true};
+    bool cpu_adaptive_threads_{true};
 
     // Pattern params for GPU recreation
     PatternType pattern_type_{PatternType::SUFFIX_CUSTOM};

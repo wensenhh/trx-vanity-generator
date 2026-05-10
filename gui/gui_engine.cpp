@@ -29,6 +29,8 @@ void GUIEngine::set_pattern(std::unique_ptr<Pattern> pattern) {
     if (batch_size_ > 0) {
         cpu_gen_->set_batch_size(batch_size_);
     }
+    cpu_gen_->set_adaptive_batch_size(cpu_adaptive_batch_);
+    cpu_gen_->set_adaptive_threads(cpu_adaptive_threads_);
 }
 
 void GUIEngine::set_mode(GUIMode mode) {
@@ -48,6 +50,33 @@ void GUIEngine::set_batch_size(size_t size) {
 void GUIEngine::set_max_attempts(uint64_t max) {
     max_attempts_ = max;
     if (cpu_gen_) cpu_gen_->set_max_attempts(max);
+}
+
+void GUIEngine::set_cpu_adaptive_batch(bool enabled) {
+    cpu_adaptive_batch_ = enabled;
+    if (cpu_gen_) cpu_gen_->set_adaptive_batch_size(enabled);
+}
+
+void GUIEngine::set_cpu_adaptive_threads(bool enabled) {
+    cpu_adaptive_threads_ = enabled;
+    if (cpu_gen_) cpu_gen_->set_adaptive_threads(enabled);
+}
+
+bool GUIEngine::cpu_adaptive_batch() const {
+    return cpu_adaptive_batch_;
+}
+
+bool GUIEngine::cpu_adaptive_threads() const {
+    return cpu_adaptive_threads_;
+}
+
+void GUIEngine::apply_cpu_auto_tune() {
+    if (cpu_gen_) {
+        cpu_gen_->apply_auto_tune();
+        // sync back the applied values
+        num_threads_ = cpu_gen_->detect_optimal_threads();
+        batch_size_ = cpu_gen_->detect_optimal_batch_size();
+    }
 }
 
 void GUIEngine::start() {

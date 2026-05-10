@@ -30,6 +30,17 @@ public:
     void set_batch_size(size_t size);
     void set_max_attempts(uint64_t max_attempts);
 
+    // Adaptive performance tuning
+    void set_adaptive_batch_size(bool enabled);
+    void set_adaptive_threads(bool enabled);
+    bool is_adaptive_batch_size() const { return adaptive_batch_size_.load(); }
+    bool is_adaptive_threads() const { return adaptive_threads_.load(); }
+
+    // Auto-tune: detect optimal settings based on hardware
+    size_t detect_optimal_threads();
+    size_t detect_optimal_batch_size();
+    void apply_auto_tune(); // apply detected settings if adaptive mode is on
+
     // Generation control
     void start();
     void stop();
@@ -59,6 +70,10 @@ private:
     size_t batch_size_;
     std::atomic<bool> running_{false};
     std::atomic<bool> stop_requested_{false};
+
+    // Adaptive tuning flags
+    std::atomic<bool> adaptive_batch_size_{true};
+    std::atomic<bool> adaptive_threads_{true};
 
     // Statistics
     std::atomic<uint64_t> total_attempts_{0};

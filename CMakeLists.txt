@@ -408,6 +408,13 @@ if(BUILD_TESTS AND BUILD_GUI AND FLTK_FOUND)
     endif()
     add_test(NAME gui_engine_smoke COMMAND test_gui_smoke)
     set_tests_properties(gui_engine_smoke PROPERTIES TIMEOUT 30)
+
+    add_executable(test_cpu_performance tests/test_cpu_performance.cpp host/cpu_generator.cpp utils/crypto.cpp utils/pattern.cpp utils/rng.cpp)
+    target_link_libraries(test_cpu_performance OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
+    target_include_directories(test_cpu_performance PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_options(test_cpu_performance PRIVATE -Wall -Wextra -O3 -march=native)
+    add_test(NAME cpu_performance COMMAND test_cpu_performance)
+    set_tests_properties(cpu_performance PROPERTIES TIMEOUT 60)
 endif()
 
 # ============================================================================

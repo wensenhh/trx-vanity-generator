@@ -38,6 +38,8 @@ static Fl_Input*       g_pattern_arg = nullptr;
 static Fl_Input*       g_pattern_arg2 = nullptr;
 static Fl_Spinner*     g_threads = nullptr;
 static Fl_Check_Button* g_use_gpu = nullptr;
+static Fl_Check_Button* g_adaptive_batch = nullptr;
+static Fl_Check_Button* g_adaptive_threads = nullptr;
 static Fl_Button*      g_btn_start = nullptr;
 static Fl_Button*      g_btn_pause = nullptr;
 static Fl_Button*      g_btn_stop = nullptr;
@@ -199,6 +201,8 @@ static void start_generation() {
     g_engine = std::make_unique<GUIEngine>();
     g_engine->set_pattern(std::move(pattern));
     g_engine->set_num_threads(static_cast<size_t>(g_threads->value()));
+    g_engine->set_cpu_adaptive_batch(g_adaptive_batch->value());
+    g_engine->set_cpu_adaptive_threads(g_adaptive_threads->value());
     if (g_use_gpu->value()) {
         g_engine->set_mode(GUIMode::GPU);
     } else {
@@ -502,6 +506,15 @@ int main(int argc, char** argv) {
     // GPU checkbox
     g_use_gpu = new Fl_Check_Button(420, 40, 120, 25, "使用 GPU");
 
+    // Adaptive performance checkboxes
+    g_adaptive_batch = new Fl_Check_Button(420, 65, 140, 20, "自适应批量");
+    g_adaptive_batch->tooltip("根据CPU核心数自动调整每批次生成数量");
+    g_adaptive_batch->value(1); // default ON
+
+    g_adaptive_threads = new Fl_Check_Button(560, 65, 140, 20, "自适应线程");
+    g_adaptive_threads->tooltip("根据CPU核心数自动调整线程数");
+    g_adaptive_threads->value(1); // default ON
+
     // Buttons
     g_btn_start = new Fl_Button(520, 10, 80, 25, "开始");
     g_btn_start->callback([](Fl_Widget*, void*) { start_generation(); });
@@ -518,23 +531,23 @@ int main(int argc, char** argv) {
     g_btn_export->callback([](Fl_Widget*, void*) { show_export_dialog(); });
     g_btn_export->deactivate();
 
-    Fl_Button* g_btn_history = new Fl_Button(520, 70, 80, 25, "历史记录");
+    Fl_Button* g_btn_history = new Fl_Button(520, 90, 80, 25, "历史记录");
     g_btn_history->callback([](Fl_Widget*, void*) { show_history_dialog(); });
 
     // Stats
-    g_stats_box = new Fl_Box(10, 105, W - 20, 20, "准备就绪");
+    g_stats_box = new Fl_Box(10, 125, W - 20, 20, "准备就绪");
     g_stats_box->box(FL_THIN_DOWN_BOX);
     g_stats_box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
 
     // Log display
     g_log_buffer = new Fl_Text_Buffer();
-    g_log_display = new Fl_Text_Display(10, 135, W - 20, 180);
+    g_log_display = new Fl_Text_Display(10, 155, W - 20, 180);
     g_log_display->buffer(g_log_buffer);
     g_log_display->textfont(FL_COURIER);
     g_log_display->textsize(12);
 
     // Results scroll area
-    g_results_scroll = new Fl_Scroll(10, 325, W - 20, H - 335);
+    g_results_scroll = new Fl_Scroll(10, 345, W - 20, H - 355);
     g_results_scroll->box(FL_THIN_DOWN_BOX);
 
     g_main_win->end();
@@ -542,6 +555,7 @@ int main(int argc, char** argv) {
     g_main_win->show(argc, argv);
 
     append_log("TRX Vanity GUI MVP 已启动");
+    append_log("性能优化: CPU自适应批量大小和线程数已启用");
     append_log("安全提示: 私钥默认隐藏，点击“显示私钥”需二次确认");
     append_log("导出结果: 点击“导出结果”可将命中地址加密保存为 CSV/JSON");
     append_log("本窗口关闭时会安全停止后台任务");

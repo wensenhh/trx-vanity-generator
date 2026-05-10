@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include <fstream>
+#include <thread>
 
 namespace trx {
 
@@ -11,7 +12,9 @@ CPUGenerator::CPUGenerator()
     : ecc_(std::make_unique<Secp256k1>())
     , rng_(std::make_unique<RNG>())
     , num_threads_(std::thread::hardware_concurrency())
-    , batch_size_(10000) {}
+    , batch_size_(10000)
+    , adaptive_batch_size_(true)
+    , adaptive_threads_(true) {}
 
 CPUGenerator::~CPUGenerator() {
     stop();
@@ -28,14 +31,67 @@ void CPUGenerator::add_pattern(std::unique_ptr<Pattern> pattern) {
 
 void CPUGenerator::set_num_threads(size_t threads) {
     num_threads_ = threads;
+    adaptive_threads_ = false; // manual override disables auto-tune
 }
 
 void CPUGenerator::set_batch_size(size_t size) {
     batch_size_ = size;
+    adaptive_batch_size_ = false; // manual override disables auto-tune
 }
 
 void CPUGenerator::set_max_attempts(uint64_t max_attempts) {
     max_attempts_ = max_attempts;
+}
+
+void CPUGenerator::set_adaptive_batch_size(bool enabled) {
+    adaptive_batch_size_ = enabled;
+}
+
+void CPUGenerator::set_adaptive_threads(bool enabled) {
+    adaptive_threads_ = enabled;
+}
+
+size_t CPUGenerator::detect_optimal_threads() {
+    unsigned int hw_threads = std::thread::hardware_concurrency();
+    if (hw_threads == 0) hw_threads = 4;
+
+    // On systems with many cores, leave some headroom for OS / GUI
+    size_t optimal = hw_threads;
+    if (hw_threads > 8) {
+        optimal = hw_threads - 2;
+    } else if (hw_threads > 4) {
+        optimal = hw_threads - 1;
+    }
+    return std::max<size_t>(1, optimal);
+}
+
+size_t CPUGenerator::detect_optimal_batch_size() {
+    unsigned int hw_threads = std::thread::hardware_concurrency();
+    if (hw_threads == 0) hw_threads = 4;
+
+    // Scale batch size with core count to amortize overhead
+    // Small core count: smaller batches for responsiveness
+    // Large core count: larger batches to reduce synchronization overhead
+    size_t base_batch = 1000;
+    if (hw_threads <= 4) {
+        base_batch = 2000;
+    } else if (hw_threads <= 8) {
+        base_batch = 5000;
+    } else if (hw_threads <= 16) {
+        base_batch = 10000;
+    } else {
+        base_batch = 20000;
+    }
+    return base_batch;
+}
+
+void CPUGenerator::apply_auto_tune() {
+    if (adaptive_threads_) {
+        num_threads_ = detect_optimal_threads();
+    }
+    if (adaptive_batch_size_) {
+        batch_size_ = detect_optimal_batch_size();
+    }
 }
 
 void CPUGenerator::set_callback(ResultCallback cb) {
@@ -45,6 +101,9 @@ void CPUGenerator::set_callback(ResultCallback cb) {
 
 void CPUGenerator::start() {
     if (running_.load()) return;
+
+    // Apply auto-tuning before starting if enabled
+    apply_auto_tune();
 
     running_ = true;
     stop_requested_ = false;
