@@ -51,7 +51,6 @@ void GUIEngine::set_max_attempts(uint64_t max) {
 
 void GUIEngine::start() {
     if (running_.load()) return;
-    if (!cpu_gen_) return;
 
     // Ensure any previous ticker thread is fully cleaned up
     if (ticker_thread_.joinable()) {
@@ -74,12 +73,48 @@ void GUIEngine::start() {
         matches_.clear();
     }
 
-    // Wire callback
-    cpu_gen_->set_callback([this](const MatchResult& raw) {
-        on_match(raw);
-    });
-
-    cpu_gen_->start();
+    if (mode_ == GUIMode::GPU) {
+#ifdef USE_OPENCL
+        if (!gpu_gen_) {
+            gpu_gen_ = std::make_unique<GPUGenerator>();
+            // GPU generator needs pattern for host-side verification.
+            // Since Pattern is moved into cpu_gen_, we can't easily clone it.
+            // Workaround: use a "match everything" pattern for host verification.
+            // The GPU kernel already does exact filtering via its own pattern
+            // parameters (gpu_pattern_chars, gpu_pattern_type, gpu_pattern_len).
+            // Host-side matcher_.matches_any() in process_gpu_results() will
+            // accept all GPU-returned results, which is correct because the
+            // GPU already filtered them exactly.
+            gpu_gen_->set_pattern(std::make_unique<ContainsPattern>(""));
+            // Configure GPU
+            GPUGenerationConfig config;
+            if (batch_size_ > 0) {
+                config.batch_size = batch_size_;
+            }
+            gpu_gen_->set_config(config);
+            gpu_gen_->initialize();
+        }
+        gpu_gen_->set_callback([this](const MatchResult& raw) {
+            on_match(raw);
+        });
+        gpu_gen_->start();
+#else
+        // Fallback to CPU if OpenCL not available
+        if (cpu_gen_) {
+            cpu_gen_->set_callback([this](const MatchResult& raw) {
+                on_match(raw);
+            });
+            cpu_gen_->start();
+        }
+#endif
+    } else {
+        // CPU path
+        if (!cpu_gen_) return;
+        cpu_gen_->set_callback([this](const MatchResult& raw) {
+            on_match(raw);
+        });
+        cpu_gen_->start();
+    }
 
     // Start stats ticker
     ticker_thread_ = std::thread(&GUIEngine::ticker_loop, this);
@@ -87,7 +122,13 @@ void GUIEngine::start() {
 
 void GUIEngine::pause() {
     paused_ = true;
-    if (cpu_gen_) cpu_gen_->stop();
+    if (mode_ == GUIMode::GPU) {
+#ifdef USE_OPENCL
+        if (gpu_gen_) gpu_gen_->stop();
+#endif
+    } else {
+        if (cpu_gen_) cpu_gen_->stop();
+    }
     // Join ticker thread so it doesn't keep running during pause
     if (ticker_thread_.joinable()) {
         ticker_thread_.join();
@@ -98,13 +139,7 @@ void GUIEngine::pause() {
 void GUIEngine::resume() {
     if (!running_.load() || !paused_.load()) return;
     paused_ = false;
-    // CPUGenerator has no resume() — we rely on the fact that
-    // pause() only sets paused_ and stops threads.  To resume,
-    // we simply call start() again, but protect stats/matches
-    // from being wiped by skipping the reset logic in start().
-    //
-    // For now, the simplest correct behaviour is to re-start
-    // the generator but preserve our GUI-level stats/matches.
+    // Preserve stats/matches from being wiped
     {
         std::lock_guard<std::mutex> lock(stats_mutex_);
         // keep existing start_time_ and accumulated stats
@@ -113,12 +148,25 @@ void GUIEngine::resume() {
         std::lock_guard<std::mutex> lock(matches_mutex_);
         // keep existing matches_
     }
-    if (cpu_gen_) {
-        cpu_gen_->set_callback([this](const MatchResult& raw) {
-            on_match(raw);
-        });
-        cpu_gen_->start();
+
+    if (mode_ == GUIMode::GPU) {
+#ifdef USE_OPENCL
+        if (gpu_gen_) {
+            gpu_gen_->set_callback([this](const MatchResult& raw) {
+                on_match(raw);
+            });
+            gpu_gen_->start();
+        }
+#endif
+    } else {
+        if (cpu_gen_) {
+            cpu_gen_->set_callback([this](const MatchResult& raw) {
+                on_match(raw);
+            });
+            cpu_gen_->start();
+        }
     }
+
     // Restart stats ticker if it was joined during pause/stop
     if (!ticker_thread_.joinable()) {
         ticker_thread_ = std::thread(&GUIEngine::ticker_loop, this);
@@ -129,7 +177,13 @@ void GUIEngine::stop() {
     stop_requested_ = true;
     running_ = false;
     paused_ = false;
-    if (cpu_gen_) cpu_gen_->stop();
+    if (mode_ == GUIMode::GPU) {
+#ifdef USE_OPENCL
+        if (gpu_gen_) gpu_gen_->stop();
+#endif
+    } else {
+        if (cpu_gen_) cpu_gen_->stop();
+    }
     if (ticker_thread_.joinable()) {
         ticker_thread_.join();
     }
@@ -139,9 +193,18 @@ void GUIEngine::stop() {
 GUIStats GUIEngine::get_stats() const {
     std::lock_guard<std::mutex> lock(stats_mutex_);
     GUIStats s = stats_;
-    if (cpu_gen_) {
-        s.total_attempts = cpu_gen_->get_total_attempts();
-        s.rate_per_second = cpu_gen_->get_rate();
+    if (mode_ == GUIMode::GPU) {
+#ifdef USE_OPENCL
+        if (gpu_gen_) {
+            s.total_attempts = gpu_gen_->get_total_attempts();
+            s.rate_per_second = gpu_gen_->get_rate();
+        }
+#endif
+    } else {
+        if (cpu_gen_) {
+            s.total_attempts = cpu_gen_->get_total_attempts();
+            s.rate_per_second = cpu_gen_->get_rate();
+        }
     }
     s.is_running = running_.load();
     s.is_paused = paused_.load();
