@@ -6,8 +6,8 @@
 
 ## 当前可用状态
 
-- **开发者 CLI：可用（alpha）**。适合能安装编译工具、会使用命令行的用户。
-- **普通用户 GUI / Windows Installer / macOS DMG：尚未正式发布**。这些属于产品路线图，不应把当前源码版误认为“一键安装版”。
+- **开发者 CLI：beta 可用**。适合能安装编译工具、会使用命令行的用户。
+- **普通用户 GUI / Windows Installer / macOS DMG：beta 测试阶段，可从源码构建 GUI**。正式打包安装器仍在路线图中，当前 GUI 需要自行编译。
 - **生成方式：本地运行、可离线使用**。程序不需要把私钥上传到服务器；你仍需确认运行环境可信、结果文件妥善保存。
 
 ## 适合谁 / 不适合谁
@@ -15,7 +15,7 @@
 **适合：**
 
 - 想要生成 TRON/TRX 靓号地址，并愿意在本机保管私钥的人。
-- 开发者、技术用户、能接受命令行 alpha 版本的人。
+- 开发者、技术用户、能接受命令行 beta 版本的人。
 - 需要 CPU/GPU 两种路径做验证或性能测试的人。
 
 **暂不适合：**
@@ -26,10 +26,10 @@
 
 ## 下载 / 安装入口
 
-当前还没有正式 GUI 安装包。请根据你的身份选择：
+当前 CLI 已 beta 可用；GUI 可从源码构建，正式安装包仍在路线图中。请根据你的身份选择：
 
-- **普通用户：**建议等待 GUI 和正式 Release。路线图见 [#4 GUI](https://github.com/wensenhh/trx-vanity-generator/issues/4)、[#5 Windows](https://github.com/wensenhh/trx-vanity-generator/issues/5)、[#6 macOS](https://github.com/wensenhh/trx-vanity-generator/issues/6)、[#11 Release](https://github.com/wensenhh/trx-vanity-generator/issues/11)。
-- **开发者 / 技术用户：**从源码构建 CLI，见下方 Windows / macOS / Linux 步骤。
+- **普通用户：**GUI 可从源码构建运行，或等待正式打包 Release。路线图见 [#4 GUI](https://github.com/wensenhh/trx-vanity-generator/issues/4)、[#5 Windows](https://github.com/wensenhh/trx-vanity-generator/issues/5)、[#6 macOS](https://github.com/wensenhh/trx-vanity-generator/issues/6)、[#11 Release](https://github.com/wensenhh/trx-vanity-generator/issues/11)。
+- **开发者 / 技术用户：**从源码构建 CLI 或 GUI，见下方 Windows / macOS / Linux 步骤。
 - **官网与截图素材：**当前仅提供占位说明，不能使用真实私钥或真实结果 CSV。见 [docs/WEBSITE_COPY_zh.md](docs/WEBSITE_COPY_zh.md) 和 [docs/assets/README.md](docs/assets/README.md)。
 - **发布检查与反馈：**维护者发布前请使用 [docs/RELEASE_CHECKLIST_zh.md](docs/RELEASE_CHECKLIST_zh.md)；用户反馈请使用 [docs/RELEASE_FEEDBACK_TEMPLATE_zh.md](docs/RELEASE_FEEDBACK_TEMPLATE_zh.md)，且不要上传私钥、结果 CSV、`.env` 或 token。
 
