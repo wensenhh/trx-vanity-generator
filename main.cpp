@@ -742,12 +742,29 @@ int main(int argc, char* argv[]) {
                  << "\"avg_kernel_ms\":" << stats.avg(stats.kernel_ms) << ","
                  << "\"avg_count_read_ms\":" << stats.avg(stats.count_read_ms) << ","
                  << "\"avg_result_read_ms\":" << stats.avg(stats.result_read_ms) << ","
-                 << "\"avg_host_process_ms\":\"" << stats.avg(stats.host_process_ms)
+                 << "\"avg_host_process_ms\":" << stats.avg(stats.host_process_ms)
                  << "}";
             std::cout << "\nBENCHMARK_JSON " << json.str() << "\n";
         }
     }
 #endif
+
+    if (!use_gpu && benchmark_json) {
+        std::ostringstream json;
+        json << std::fixed << std::setprecision(3)
+             << "{"
+             << "\"mode\":\"cpu\","
+             << "\"pattern_type\":\"" << pattern_type << "\","
+             << "\"pattern\":\"" << pattern_arg << "\","
+             << "\"batch_size\":0,"
+             << "\"batches\":0,"
+             << "\"attempts\":" << total_attempts << ","
+             << "\"elapsed_sec\":" << total_elapsed << ","
+             << "\"addr_per_sec\":" << (total_elapsed > 0.0 ? total_attempts / total_elapsed : 0.0) << ","
+             << "\"matches_found\":" << total_matches
+             << "}";
+        std::cout << "\nBENCHMARK_JSON " << json.str() << "\n";
+    }
 
     // Save config if requested
     if (save_config) {

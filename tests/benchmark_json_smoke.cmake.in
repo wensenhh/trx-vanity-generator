@@ -1,0 +1,83 @@
+set(TRX_VANITY "@CMAKE_CURRENT_BINARY_DIR@/trx_vanity")
+
+# Run benchmark-json smoke and validate the emitted JSON is well-formed
+execute_process(
+    COMMAND "${TRX_VANITY}" contains T --max-attempts 64 -t 1 --benchmark-json
+    RESULT_VARIABLE result
+    OUTPUT_VARIABLE stdout_text
+    ERROR_VARIABLE stderr_text
+)
+
+set(full_output "${stdout_text}\n${stderr_text}")
+
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "benchmark-json smoke: expected success, got ${result}\n${full_output}")
+endif()
+
+# Extract the BENCHMARK_JSON line (capture only the JSON payload on that line, stopping at newline)
+if(NOT full_output MATCHES "BENCHMARK_JSON ([^\r\n]+)")
+    message(FATAL_ERROR "benchmark-json smoke: missing BENCHMARK_JSON line\n${full_output}")
+endif()
+
+set(json_payload "${CMAKE_MATCH_1}")
+# Trim trailing whitespace/newlines from the captured payload
+string(STRIP "${json_payload}" json_payload)
+
+# Validate required fields are present and numeric fields don't have stray quotes
+if(NOT json_payload MATCHES "\"mode\":\"cpu\"")
+    message(FATAL_ERROR "benchmark-json smoke: missing or wrong mode field\n${json_payload}")
+endif()
+
+if(NOT json_payload MATCHES "\"pattern_type\":\"contains\"")
+    message(FATAL_ERROR "benchmark-json smoke: missing pattern_type field\n${json_payload}")
+endif()
+
+if(NOT json_payload MATCHES "\"pattern\":\"T\"")
+    message(FATAL_ERROR "benchmark-json smoke: missing pattern field\n${json_payload}")
+endif()
+
+if(NOT json_payload MATCHES "\"batch_size\":[0-9]+")
+    message(FATAL_ERROR "benchmark-json smoke: missing or invalid batch_size field\n${json_payload}")
+endif()
+
+if(NOT json_payload MATCHES "\"batches\":[0-9]+")
+    message(FATAL_ERROR "benchmark-json smoke: missing or invalid batches field\n${json_payload}")
+endif()
+
+if(NOT json_payload MATCHES "\"attempts\":[0-9]+")
+    message(FATAL_ERROR "benchmark-json smoke: missing or invalid attempts field\n${json_payload}")
+endif()
+
+if(NOT json_payload MATCHES "\"elapsed_sec\":[0-9]+\\.[0-9]+")
+    message(FATAL_ERROR "benchmark-json smoke: missing or invalid elapsed_sec field\n${json_payload}")
+endif()
+
+if(NOT json_payload MATCHES "\"addr_per_sec\":[0-9]+\\.[0-9]+")
+    message(FATAL_ERROR "benchmark-json smoke: missing or invalid addr_per_sec field\n${json_payload}")
+endif()
+
+if(NOT json_payload MATCHES "\"matches_found\":[0-9]+")
+    message(FATAL_ERROR "benchmark-json smoke: missing or invalid matches_found field\n${json_payload}")
+endif()
+
+# The key regression check: avg_host_process_ms must be a bare number, not a quoted string
+if(json_payload MATCHES "\"avg_host_process_ms\":\"[^\"]*\"")
+    message(FATAL_ERROR "benchmark-json smoke: avg_host_process_ms is quoted (string) instead of numeric\n${json_payload}")
+endif()
+
+if(NOT json_payload MATCHES "\"avg_host_process_ms\":[0-9]+\\.[0-9]+")
+    # CPU mode does not include avg_host_process_ms; that's OK
+    if(NOT json_payload MATCHES "\"mode\":\"cpu\"")
+        message(FATAL_ERROR "benchmark-json smoke: missing or invalid avg_host_process_ms numeric field\n${json_payload}")
+    endif()
+endif()
+
+# Verify the JSON object is closed properly (last char should be })
+string(LENGTH "${json_payload}" payload_len)
+math(EXPR last_idx "${payload_len} - 1")
+string(SUBSTRING "${json_payload}" ${last_idx} 1 last_char)
+if(NOT last_char STREQUAL "}")
+    message(FATAL_ERROR "benchmark-json smoke: JSON does not end with '}'\n${json_payload}")
+endif()
+
+message(STATUS "benchmark-json smoke PASSED")

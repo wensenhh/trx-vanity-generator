@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
-project(trx_vanity VERSION 1.0.0-beta LANGUAGES CXX C)
+project(trx_vanity VERSION 1.0.0 LANGUAGES CXX C)
+set(PROJECT_VERSION_SUFFIX "-beta")
+set(PROJECT_VERSION_FULL "${PROJECT_VERSION}${PROJECT_VERSION_SUFFIX}")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -272,6 +274,15 @@ if(BUILD_TESTS)
             COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/package_gpu_runtime_smoke.cmake)
         set_tests_properties(package_tgz_gpu_runtime_smoke PROPERTIES TIMEOUT 60)
     endif()
+
+    # Benchmark JSON output format validation (regression test for quoted numeric fields)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/benchmark_json_smoke.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/benchmark_json_smoke.cmake
+        @ONLY)
+    add_test(NAME benchmark_json_format_smoke
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/benchmark_json_smoke.cmake)
+    set_tests_properties(benchmark_json_format_smoke PROPERTIES TIMEOUT 15)
 endif()
 
 # Install/package layout
@@ -428,7 +439,7 @@ endif()
 # CPack packaging configuration
 # ============================================================================
 set(CPACK_PACKAGE_NAME "trx_vanity")
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION_FULL})
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Local/offline TRON vanity address generator with OpenCL GPU acceleration")
 set(CPACK_PACKAGE_VENDOR "trx-vanity-generator")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "trx_vanity")
@@ -439,7 +450,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 set(CPACK_GENERATOR "TGZ;ZIP")
 if(APPLE)
     list(APPEND CPACK_GENERATOR "DragNDrop")
-    set(CPACK_DMG_VOLUME_NAME "TRX Vanity ${PROJECT_VERSION}")
+    set(CPACK_DMG_VOLUME_NAME "TRX Vanity ${PROJECT_VERSION_FULL}")
     set(CPACK_DMG_FORMAT "UDZO")
 endif()
 
@@ -447,7 +458,7 @@ if(WIN32)
     list(APPEND CPACK_GENERATOR "NSIS")
     # NSIS package metadata
     set(CPACK_NSIS_PACKAGE_NAME "TRX Vanity Generator")
-    set(CPACK_NSIS_DISPLAY_NAME "TRX Vanity Generator ${PROJECT_VERSION}")
+    set(CPACK_NSIS_DISPLAY_NAME "TRX Vanity Generator ${PROJECT_VERSION_FULL}")
     set(CPACK_NSIS_HELP_LINK "https://github.com/wensenhh/trx-vanity-generator")
     set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/wensenhh/trx-vanity-generator")
     # Add bin directory to user PATH
