@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
-project(trx_vanity VERSION 1.0.0-beta LANGUAGES CXX C)
+project(trx_vanity VERSION 1.0.0 LANGUAGES CXX C)
+set(PROJECT_VERSION_SUFFIX "-beta")
+set(PROJECT_VERSION_FULL "${PROJECT_VERSION}${PROJECT_VERSION_SUFFIX}")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -428,7 +430,7 @@ endif()
 # CPack packaging configuration
 # ============================================================================
 set(CPACK_PACKAGE_NAME "trx_vanity")
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION_FULL})
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Local/offline TRON vanity address generator with OpenCL GPU acceleration")
 set(CPACK_PACKAGE_VENDOR "trx-vanity-generator")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "trx_vanity")
@@ -439,7 +441,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 set(CPACK_GENERATOR "TGZ;ZIP")
 if(APPLE)
     list(APPEND CPACK_GENERATOR "DragNDrop")
-    set(CPACK_DMG_VOLUME_NAME "TRX Vanity ${PROJECT_VERSION}")
+    set(CPACK_DMG_VOLUME_NAME "TRX Vanity ${PROJECT_VERSION_FULL}")
     set(CPACK_DMG_FORMAT "UDZO")
 endif()
 
@@ -447,7 +449,7 @@ if(WIN32)
     list(APPEND CPACK_GENERATOR "NSIS")
     # NSIS package metadata
     set(CPACK_NSIS_PACKAGE_NAME "TRX Vanity Generator")
-    set(CPACK_NSIS_DISPLAY_NAME "TRX Vanity Generator ${PROJECT_VERSION}")
+    set(CPACK_NSIS_DISPLAY_NAME "TRX Vanity Generator ${PROJECT_VERSION_FULL}")
     set(CPACK_NSIS_HELP_LINK "https://github.com/wensenhh/trx-vanity-generator")
     set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/wensenhh/trx-vanity-generator")
     # Add bin directory to user PATH
