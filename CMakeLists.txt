@@ -145,6 +145,11 @@ if(OpenCL_FOUND AND USE_OPENCL)
     target_link_libraries(test_opencl_include_path Threads::Threads ${OpenCL_LIBRARIES})
     target_include_directories(test_opencl_include_path PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
     target_compile_options(test_opencl_include_path PRIVATE -Wall -Wextra -O3 -march=native)
+
+    add_executable(test_cross_verify_cpu_gpu tests/test_cross_verify_cpu_gpu.cpp utils/crypto.cpp utils/rng.cpp utils/pattern.cpp host/opencl_manager.cpp)
+    target_link_libraries(test_cross_verify_cpu_gpu OpenSSL::SSL OpenSSL::Crypto Threads::Threads ${OpenCL_LIBRARIES})
+    target_include_directories(test_cross_verify_cpu_gpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OpenCL_INCLUDE_DIRS})
+    target_compile_options(test_cross_verify_cpu_gpu PRIVATE -Wall -Wextra -O3 -march=native)
 endif()
 
 # Tests
@@ -185,6 +190,11 @@ if(BUILD_TESTS)
     if(TARGET test_opencl_include_path)
         add_test(NAME opencl_include_path_with_spaces COMMAND test_opencl_include_path)
         set_tests_properties(opencl_include_path_with_spaces PROPERTIES TIMEOUT 20)
+    endif()
+
+    if(TARGET test_cross_verify_cpu_gpu)
+        add_test(NAME cross_verify_cpu_gpu COMMAND test_cross_verify_cpu_gpu)
+        set_tests_properties(cross_verify_cpu_gpu PROPERTIES TIMEOUT 60)
     endif()
 
     add_test(NAME cli_cpu_smoke
