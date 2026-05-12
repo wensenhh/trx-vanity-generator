@@ -56,6 +56,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - GUI engine configuration caching — settings no longer lost when pattern changes
 - GPU generator lifecycle management — proper cleanup and reinitialization
 
+## [1.0.0-beta.1] - 2026-05-12
+
+### Added
+- **CPU/GPU Cross-Verification Test** — `test_cross_verify_cpu_gpu` validates identical addresses and private keys from the same seeds across all 5 pattern types (prefix, suffix, contains, consecutive, sequential)
+- **CPU Performance Benchmark** — `test_cpu_performance` validates adaptive batch sizing with JSON output and regression baseline
+
+### Fixed
+- **CMake VERSION format** — Corrected `project(VERSION 1.0.0-beta)` to `project(VERSION 1.0.0)` with separate `PROJECT_VERSION_SUFFIX "-beta"`, fixing CMP0048 policy warning while preserving the beta label in artifacts
+
 ---
 
 ## Pre-1.0.0
