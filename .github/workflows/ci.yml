@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-macos-arm64:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          brew install cmake openssl
+      - name: Configure
+        run: cmake -S . -B build -DBUILD_TESTS=ON -DBUILD_GUI=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Install smoke
+        run: cmake --install build --prefix /tmp/trx_vanity_install
+      - name: Package smoke
+        run: cpack --config build/CPackConfig.cmake -G TGZ
+
+  build-macos-x86_64:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          brew install cmake openssl
+      - name: Configure
+        run: cmake -S . -B build -DBUILD_TESTS=ON -DBUILD_GUI=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Install smoke
+        run: cmake --install build --prefix /tmp/trx_vanity_install
+      - name: Package smoke
+        run: cpack --config build/CPackConfig.cmake -G TGZ
+
+  build-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libssl-dev ocl-icd-opencl-dev opencl-headers
+      - name: Configure
+        run: cmake -S . -B build -DBUILD_TESTS=ON -DBUILD_GUI=OFF
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Install smoke
+        run: cmake --install build --prefix /tmp/trx_vanity_install
+      - name: Package smoke
+        run: cpack --config build/CPackConfig.cmake -G TGZ
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+      - name: Configure
+        shell: cmd
+        run: cmake -S . -B build -A x64 -DBUILD_TESTS=ON -DBUILD_GUI=OFF
+      - name: Build
+        shell: cmd
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        shell: cmd
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Install smoke
+        shell: cmd
+        run: cmake --install build --prefix C:\tmp\trx_vanity_install
+      - name: Package smoke
+        shell: cmd
+        run: cpack --config build\CPackConfig.cmake -G ZIP
