@@ -64,11 +64,6 @@ static std::string json_string_value(const std::string& json, const std::string&
     return result;
 }
 
-static bool json_has_key(const std::string& json, const std::string& key) {
-    std::string search = "\"" + key + "\"";
-    return json.find(search) != std::string::npos;
-}
-
 static std::optional<bool> json_bool_value(const std::string& json, const std::string& key) {
     std::string search = "\"" + key + "\"";
     size_t pos = json.find(search);
