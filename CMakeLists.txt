@@ -57,6 +57,7 @@ set(UTIL_SOURCES
     utils/export_encryption.cpp
     utils/history.cpp
     utils/config.cpp
+    utils/first_run.cpp
 )
 
 set(ALL_SOURCES
@@ -222,6 +223,12 @@ if(BUILD_TESTS)
     target_compile_options(test_config PRIVATE -Wall -Wextra -O3 -march=native)
     add_test(NAME config COMMAND test_config)
     set_tests_properties(config PROPERTIES TIMEOUT 10)
+
+    add_executable(test_first_run tests/test_first_run.cpp utils/first_run.cpp)
+    target_include_directories(test_first_run PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_options(test_first_run PRIVATE -Wall -Wextra -O3 -march=native)
+    add_test(NAME first_run_wizard COMMAND test_first_run)
+    set_tests_properties(first_run_wizard PROPERTIES TIMEOUT 10)
 
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_private_key_output.cmake.in

@@ -1,5 +1,6 @@
 #include "utils/constants.h"
 #include "utils/config.h"
+#include "utils/first_run.h"
 #include "utils/crypto.h"
 #include "utils/pattern.h"
 #include "utils/estimate.h"
@@ -178,11 +179,21 @@ int main(int argc, char* argv[]) {
     // Config file support
     std::string config_file;
     bool save_config = false;
+    bool security_notice_only = false;
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "--config") {
             if (i + 1 < argc) config_file = argv[++i];
         } else if (std::string(argv[i]) == "--save-config") {
             save_config = true;
+        } else if (std::string(argv[i]) == "--security-notice") {
+            security_notice_only = true;
+        }
+    }
+
+    // First-run security wizard (unless explicitly showing the notice)
+    if (!security_notice_only) {
+        if (!trx::FirstRunWizard::check_and_show()) {
+            return 1;
         }
     }
 
@@ -199,6 +210,14 @@ int main(int argc, char* argv[]) {
         print_usage(argv[0]);
         return 0;
     }
+
+    if (security_notice_only) {
+        // Show the notice and exit (do not require pattern args)
+        trx::FirstRunWizard::reset_acknowledgment();
+        trx::FirstRunWizard::check_and_show();
+        return 0;
+    }
+
     if (argc < 2) {
         return fail(argv[0], "missing <pattern-type>.",
                     "Run 'trx_vanity --help' for examples and supported pattern types.", true);
